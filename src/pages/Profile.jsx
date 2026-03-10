@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { logout } from "../reducers/user";
 
 // ── Icons ──────────────────────────────────────────────────────
 
@@ -177,7 +179,13 @@ const VENUE_ITEMS = [
 
 export default function Profile() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [activeItem, setActiveItem] = useState(null);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
 
   return (
     <div className="flex flex-col max-w-[600px] w-full font-sans">
@@ -219,6 +227,7 @@ export default function Profile() {
       {/* Logout */}
       <button
         type="button"
+        onClick={handleLogout}
         className="flex items-center gap-2.5 bg-[#fef2f1] hover:bg-[#fde8e6] border border-[#fde8e6] hover:border-[#fbd0cc] cursor-pointer py-2.5 px-4 rounded-xl w-fit text-[#d94f3d] font-sans text-[15px] font-bold transition-colors duration-150"
         style={{ WebkitTapHighlightColor: "transparent" }}
       >

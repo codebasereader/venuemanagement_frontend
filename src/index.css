@@ -32,3 +32,11 @@
 .animate-fade-up {
   animation: fadeUp 0.2s ease;
 }
+@keyframes beam {
+  0%   { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(400%) skewX(-12deg); }
+}
+
+.animate-beam {
+  animation: beam 3.5s ease-in-out infinite;
+}

@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { logout, updateUser } from "../reducers/user";
+import { getCurrentUser } from "../api/auth";
+import { ROLES } from "../../config";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -63,18 +67,40 @@ const SearchIcon = ({ size = 14 }) => (
   </svg>
 );
 
-// ── Nav config ─────────────────────────────────────────────────────────────
+const UsersIcon = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
 
-const navItems = [
-  { path: "/",         label: "Home",     icon: HomeIcon,     end: true },
-  { path: "/leads",    label: "Leads",    icon: LeadsIcon },
+const VenuesIcon = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+);
+
+// ── Nav configs (role-based) ───────────────────────────────────────────────
+
+const inchargeNavItems = [
+  { path: "/", label: "Home", icon: HomeIcon, end: true },
+  { path: "/leads", label: "Leads", icon: LeadsIcon },
   { path: "/calendar", label: "Calendar", icon: CalendarIcon },
-  { path: "/profile",  label: "Profile",  icon: ProfileIcon },
+  { path: "/profile", label: "Profile", icon: ProfileIcon },
+];
+
+const adminNavItems = [
+  { path: "/users", label: "View Users", icon: UsersIcon, end: false },
+  { path: "/venues", label: "View Venues", icon: VenuesIcon, end: false },
 ];
 
 // ── Avatar ─────────────────────────────────────────────────────────────────
 
-function Avatar({ size = 32 }) {
+function Avatar({ name, size = 32 }) {
+  const initial = name ? String(name).trim().charAt(0).toUpperCase() : "A";
   return (
     <div
       className="rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
@@ -84,7 +110,7 @@ function Avatar({ size = 32 }) {
         background: "linear-gradient(135deg, #7c6fcd, #5ab99c)",
       }}
     >
-      A
+      {initial}
     </div>
   );
 }
@@ -140,9 +166,33 @@ function BottomNavItem({ path, label, icon: Icon, end }) {
 
 // ── Layout ─────────────────────────────────────────────────────────────────
 
+function mapApiUserToState(data) {
+  const user = data?.user ?? data;
+  if (!user?.role) return null;
+  return {
+    id: user._id ?? user.id,
+    name: user.name ?? "",
+    role: user.role ?? "",
+    email_id: user.email ?? user.email_id ?? "",
+    venueId: user.venueId ?? null,
+    ...(data?.token != null && { access_token: data.token }),
+  };
+}
+
 export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile]   = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { name, role, access_token } = useSelector((state) => state.user.value);
+
+  const navItems = role === ROLES.ADMIN ? adminNavItems : inchargeNavItems;
+  const roleLabel = role === ROLES.ADMIN ? "Admin" : "Venue Incharge";
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -150,6 +200,16 @@ export default function DashboardLayout() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  useEffect(() => {
+    if (!access_token) return;
+    getCurrentUser(access_token)
+      .then((data) => {
+        const payload = mapApiUserToState(data);
+        if (payload) dispatch(updateUser(payload));
+      })
+      .catch(() => {});
+  }, [access_token, dispatch]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#f5f4f1]">
@@ -174,7 +234,7 @@ export default function DashboardLayout() {
               />
               {!collapsed && (
                 <span className="text-[15px] font-bold text-[#1a1917] font-serif tracking-[-0.01em]">
-                  Venue Management
+                  {role === ROLES.ADMIN ? "Admin" : "Venue Management"}
                 </span>
               )}
             </div>
@@ -188,7 +248,7 @@ export default function DashboardLayout() {
             </button>
           </div>
 
-          {/* Nav links */}
+          {/* Nav links (role-based) */}
           <nav className="flex-1 flex flex-col gap-0.5 px-1">
             {navItems.map(({ path, label, icon, end }) => (
               <SidebarNavItem
@@ -206,13 +266,15 @@ export default function DashboardLayout() {
           <div className="px-1 pt-1 mb-3">
             {!collapsed ? (
               <div className="flex items-center gap-2.5 p-3 rounded-xl bg-[#f0ede8]">
-                <Avatar />
+                <Avatar name={name} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-[#1a1917] truncate">Alex Johnson</div>
-                  <div className="text-[11px] text-[#9a9896] truncate">Sales Manager</div>
+                  <div className="text-xs font-semibold text-[#1a1917] truncate">{name || "User"}</div>
+                  <div className="text-[11px] text-[#9a9896] truncate">{roleLabel}</div>
                 </div>
                 <button
+                  type="button"
                   title="Logout"
+                  onClick={handleLogout}
                   className="flex items-center justify-center w-7 h-7 rounded-[8px] border-none bg-[#fde8e6] text-[#d94f3d] cursor-pointer shrink-0 transition-colors duration-150 hover:bg-[#fbd0cc]"
                 >
                   <LogoutIcon size={14} />
@@ -220,7 +282,7 @@ export default function DashboardLayout() {
               </div>
             ) : (
               <div className="flex justify-center pt-1">
-                <Avatar />
+                <Avatar name={name} />
               </div>
             )}
           </div>
@@ -242,7 +304,7 @@ export default function DashboardLayout() {
               <BellIcon size={16} />
               <span className="absolute top-1.5 right-1.5 w-[7px] h-[7px] bg-[#e8875a] rounded-full border-[1.5px] border-[#faf9f7]" />
             </button>
-            {isMobile && <Avatar />}
+            {isMobile && <Avatar name={name} />}
           </div>
         </header>
 
