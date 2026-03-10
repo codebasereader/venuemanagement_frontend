@@ -1,7 +1,18 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { Modal, Select, Spin, message } from "antd";
 import AddSpaceModal from "./AddSpaceModal";
 import SpaceCard from "./SpaceCard";
+import { listVenues } from "../../api/venue";
+import {
+  createSpace,
+  deleteSpace,
+  listSpaces,
+  updateSpace,
+} from "../../api/spaces";
+import { uploadImageToS3 } from "../../api/images";
+import { ROLES } from "../../../config";
 
 const ChevronLeftIcon = ({ size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -16,67 +27,146 @@ const PlusIcon = ({ size = 18 }) => (
   </svg>
 );
 
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+function asSpacesArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.spaces)) return data.spaces;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
 }
 
-const VENUE_SPACES_KEY = "venue-spaces";
+function asVenuesArray(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.venues)) return data.venues;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
 
 export default function ViewSpaces() {
   const navigate = useNavigate();
+  const { access_token: accessToken, role, venueId: myVenueId } = useSelector((s) => s.user.value);
+  const [msgApi, contextHolder] = message.useMessage();
+
+  const isAdmin = role === ROLES.ADMIN;
+  const [venueOptions, setVenueOptions] = useState([]);
+  const [venuesLoading, setVenuesLoading] = useState(false);
+  const [selectedVenueId, setSelectedVenueId] = useState(myVenueId ?? null);
+
   const [spaces, setSpaces] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(VENUE_SPACES_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setSpaces(parsed);
-      }
-    } catch (_) {}
-  }, []);
+  const effectiveVenueId = isAdmin ? selectedVenueId : myVenueId;
 
   useEffect(() => {
-    try {
-      localStorage.setItem(VENUE_SPACES_KEY, JSON.stringify(spaces));
-    } catch (_) {}
-  }, [spaces]);
+    if (!accessToken || !isAdmin) return;
+    setVenuesLoading(true);
+    listVenues(accessToken)
+      .then((data) => {
+        const arr = asVenuesArray(data);
+        const opts = arr
+          .filter(Boolean)
+          .map((v) => ({ value: v?._id ?? v?.id, label: v?.name ?? v?._id ?? "" }))
+          .filter((o) => o.value);
+        setVenueOptions(opts);
+        if (!selectedVenueId && opts[0]?.value) setSelectedVenueId(opts[0].value);
+      })
+      .catch(() => {})
+      .finally(() => setVenuesLoading(false));
+  }, [accessToken, isAdmin, selectedVenueId]);
 
-  const handleSave = useCallback(async (payload) => {
-    const images = await Promise.all(
-      (payload.images || []).map((img) => (typeof img === "string" ? img : fileToDataUrl(img)))
-    );
-    const data = {
-      ...payload,
-      images,
-      id: payload.id || `space-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    };
-    if (payload.id) {
-      setSpaces((prev) => prev.map((s) => (s.id === payload.id ? { ...s, ...data } : s)));
-    } else {
-      setSpaces((prev) => [...prev, data]);
+  const fetchSpaces = useCallback(async () => {
+    if (!accessToken || !effectiveVenueId) return;
+    setLoading(true);
+    try {
+      const data = await listSpaces(accessToken, effectiveVenueId);
+      setSpaces(asSpacesArray(data));
+    } catch (err) {
+      msgApi.error(err?.response?.data?.message ?? "Failed to load spaces");
+      setSpaces([]);
+    } finally {
+      setLoading(false);
     }
-    setModalOpen(false);
-    setEditingSpace(null);
-  }, []);
+  }, [accessToken, effectiveVenueId, msgApi]);
+
+  useEffect(() => {
+    if (!effectiveVenueId) return;
+    fetchSpaces();
+  }, [effectiveVenueId, fetchSpaces]);
+
+  const handleSave = useCallback(
+    async (payload) => {
+      if (!effectiveVenueId) {
+        msgApi.error("Select a venue first");
+        return;
+      }
+      try {
+        const entityId = payload._id || effectiveVenueId;
+        const imageUrls = [];
+        const rawImages = Array.isArray(payload.images) ? payload.images : [];
+        for (const item of rawImages) {
+          if (typeof item === "string") {
+            imageUrls.push(item);
+          } else if (item && typeof item === "object" && item instanceof File) {
+            const publicUrl = await uploadImageToS3(accessToken, item, entityId);
+            imageUrls.push(publicUrl);
+          }
+        }
+
+        const body = {
+          name: payload.name?.trim() ?? "",
+          description: payload.description?.trim() ?? "",
+          capacity: payload.capacity != null && payload.capacity !== "" ? Number(payload.capacity) : undefined,
+          dimensions: payload.dimensions?.trim() || undefined,
+          isActive: true,
+          images: imageUrls,
+        };
+        if (payload._id) {
+          await updateSpace(accessToken, effectiveVenueId, payload._id, body);
+          msgApi.success("Space updated");
+        } else {
+          await createSpace(accessToken, effectiveVenueId, body);
+          msgApi.success("Space added");
+        }
+        setModalOpen(false);
+        setEditingSpace(null);
+        await fetchSpaces();
+      } catch (err) {
+        msgApi.error(err?.response?.data?.message ?? err?.message ?? "Failed to save space");
+        throw err;
+      }
+    },
+    [accessToken, effectiveVenueId, fetchSpaces, msgApi],
+  );
 
   const handleEdit = useCallback((space) => {
     setEditingSpace(space);
     setModalOpen(true);
   }, []);
 
-  const handleDelete = useCallback((space) => {
-    if (window.confirm(`Delete "${space.spaceName || "this space"}"?`)) {
-      setSpaces((prev) => prev.filter((s) => s.id !== space.id));
-    }
-  }, []);
+  const handleDelete = useCallback(
+    (space) => {
+      if (!space?._id || !effectiveVenueId) return;
+      Modal.confirm({
+        centered: true,
+        title: "Delete space?",
+        content: `This will permanently delete "${space.name || space.spaceName || "this space"}".`,
+        okText: "Delete",
+        okButtonProps: { danger: true },
+        cancelText: "Cancel",
+        onOk: async () => {
+          try {
+            await deleteSpace(accessToken, effectiveVenueId, space._id);
+            msgApi.success("Space deleted");
+            await fetchSpaces();
+          } catch (err) {
+            msgApi.error(err?.response?.data?.message ?? "Failed to delete space");
+          }
+        },
+      });
+    },
+    [accessToken, effectiveVenueId, fetchSpaces, msgApi],
+  );
 
   const openAddModal = useCallback(() => {
     setEditingSpace(null);
@@ -93,6 +183,7 @@ export default function ViewSpaces() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap');
       `}</style>
+      {contextHolder}
 
       <div
         style={{
@@ -101,7 +192,6 @@ export default function ViewSpaces() {
           fontFamily: "'DM Sans', sans-serif",
         }}
       >
-        {/* Header: back + title + add */}
         <div
           style={{
             display: "flex",
@@ -149,85 +239,113 @@ export default function ViewSpaces() {
               Spaces
             </h1>
           </div>
-          <button
-            type="button"
-            onClick={openAddModal}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 18px",
-              borderRadius: "10px",
-              border: "none",
-              background: "#1a1917",
-              color: "white",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: "pointer",
-              flexShrink: 0,
-              transition: "background 0.15s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#3d3b38")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#1a1917")}
-          >
-            <PlusIcon />
-            Add
-          </button>
-        </div>
 
-        {/* Grid: responsive 1 col mobile, 2 col tablet+ */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
-            gap: "20px",
-          }}
-        >
-          {spaces.map((space) => (
-            <SpaceCard
-              key={space.id}
-              space={space}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-
-        {spaces.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "48px 24px",
-              background: "#faf9f7",
-              borderRadius: "16px",
-              border: "1px dashed #e8e6e2",
-            }}
-          >
-            <p style={{ margin: "0 0 8px", fontSize: "15px", fontWeight: 600, color: "#6b6966" }}>
-              No spaces yet
-            </p>
-            <p style={{ margin: 0, fontSize: "13px", color: "#9a9896" }}>
-              Add your first space to get started.
-            </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            {isAdmin && (
+              <Select
+                value={selectedVenueId}
+                onChange={setSelectedVenueId}
+                loading={venuesLoading}
+                placeholder="Select venue"
+                style={{ minWidth: 200 }}
+                options={venueOptions}
+                showSearch
+                optionFilterProp="label"
+              />
+            )}
             <button
               type="button"
               onClick={openAddModal}
+              disabled={!effectiveVenueId || loading}
               style={{
-                marginTop: "16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
                 padding: "10px 18px",
                 borderRadius: "10px",
                 border: "none",
-                background: "#1a1917",
+                background: effectiveVenueId && !loading ? "#1a1917" : "#d8d5d0",
                 color: "white",
+                fontFamily: "'DM Sans', sans-serif",
                 fontSize: "14px",
                 fontWeight: 600,
-                cursor: "pointer",
+                cursor: effectiveVenueId && !loading ? "pointer" : "not-allowed",
+                flexShrink: 0,
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                if (effectiveVenueId && !loading) e.currentTarget.style.background = "#3d3b38";
+              }}
+              onMouseLeave={(e) => {
+                if (effectiveVenueId && !loading) e.currentTarget.style.background = "#1a1917";
               }}
             >
-              Add Space
+              <PlusIcon />
+              Add
             </button>
           </div>
+        </div>
+
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "48px" }}>
+            <Spin />
+          </div>
+        ) : (
+          <>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
+                gap: "20px",
+              }}
+            >
+              {spaces.map((space) => (
+                <SpaceCard
+                  key={space._id ?? space.id}
+                  space={space}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+
+            {spaces.length === 0 && !loading && (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "48px 24px",
+                  background: "#faf9f7",
+                  borderRadius: "16px",
+                  border: "1px dashed #e8e6e2",
+                }}
+              >
+                <p style={{ margin: "0 0 8px", fontSize: "15px", fontWeight: 600, color: "#6b6966" }}>
+                  No spaces yet
+                </p>
+                <p style={{ margin: 0, fontSize: "13px", color: "#9a9896" }}>
+                  Add your first space to get started.
+                </p>
+                <button
+                  type="button"
+                  onClick={openAddModal}
+                  disabled={!effectiveVenueId}
+                  style={{
+                    marginTop: "16px",
+                    padding: "10px 18px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: effectiveVenueId ? "#1a1917" : "#d8d5d0",
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: effectiveVenueId ? "pointer" : "not-allowed",
+                  }}
+                >
+                  Add Space
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

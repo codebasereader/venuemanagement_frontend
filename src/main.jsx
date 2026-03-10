@@ -7,6 +7,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
 import userReducer from "./reducers/user";
 import { BrowserRouter } from "react-router-dom";
+import AuthInitializer from "./components/AuthInitializer";
 
 const STORAGE_KEY = "venueapp_user";
 
@@ -41,11 +42,11 @@ const store = configureStore({
 store.subscribe(() => saveState(store.getState()));
 
 createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <Provider store={store}>
-      <BrowserRouter>
+  <Provider store={store}>
+    <BrowserRouter>
+      <AuthInitializer>
         <App />
-      </BrowserRouter>
-    </Provider>
-  </StrictMode>,
+      </AuthInitializer>
+    </BrowserRouter>
+  </Provider>,
 );

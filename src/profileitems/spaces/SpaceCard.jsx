@@ -75,7 +75,7 @@ export default function SpaceCard({ space, onEdit, onDelete }) {
           fontFamily: "'DM Sans', sans-serif",
         }}
       >
-        <ImageCarousel images={images} alt={space.spaceName} />
+        <ImageCarousel images={images} alt={space.name || space.spaceName} />
 
         <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
           <h3
@@ -88,7 +88,7 @@ export default function SpaceCard({ space, onEdit, onDelete }) {
               letterSpacing: "-0.01em",
             }}
           >
-            {space.spaceName || "Unnamed space"}
+            {space.name || space.spaceName || "Unnamed space"}
           </h3>
 
           <div
@@ -102,16 +102,16 @@ export default function SpaceCard({ space, onEdit, onDelete }) {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", fontSize: "13px", color: "#6b6966" }}>
-              {space.maxGuests && (
+              {(space.capacity != null && space.capacity !== "") && (
                 <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   <GuestsIcon />
-                  {space.maxGuests} guests
+                  {space.capacity} guests
                 </span>
               )}
-              {space.dimension && (
+              {(space.dimensions || space.dimension || space.metadata?.dimension) && (
                 <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   <DimensionIcon />
-                  {space.dimension}
+                  {space.dimensions || space.dimension || space.metadata?.dimension}
                 </span>
               )}
             </div>
@@ -224,7 +224,7 @@ export default function SpaceCard({ space, onEdit, onDelete }) {
             </svg>
           </button>
           <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: "100%", maxHeight: "85vh", width: "100%" }}>
-            <ImageCarousel images={images} alt={space.spaceName} style={{ borderRadius: "12px" }} />
+            <ImageCarousel images={images} alt={space.name || space.spaceName} style={{ borderRadius: "12px" }} />
           </div>
         </div>
       )}

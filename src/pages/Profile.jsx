@@ -2,73 +2,154 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { logout } from "../reducers/user";
+import { useAuth } from "../hooks/useAuth";
 
 // ── Icons ──────────────────────────────────────────────────────
 
 const VenueIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-    <rect x="9" y="14" width="6" height="7" rx="1"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <rect x="9" y="14" width="6" height="7" rx="1" />
   </svg>
 );
 
 const SpacesIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-    <path d="M2 17l10 5 10-5"/>
-    <path d="M2 12l10 5 10-5"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+    <path d="M2 17l10 5 10-5" />
+    <path d="M2 12l10 5 10-5" />
   </svg>
 );
 
 const PricingIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <path d="M12 6v2m0 8v2M8.5 9.5a3.5 1.5 0 0 1 7 0c0 2-7 2.5-7 4.5a3.5 1.5 0 0 0 7 0"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 6v2m0 8v2M8.5 9.5a3.5 1.5 0 0 1 7 0c0 2-7 2.5-7 4.5a3.5 1.5 0 0 0 7 0" />
   </svg>
 );
 
 const GalleryIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2"/>
-    <circle cx="8.5" cy="8.5" r="1.5"/>
-    <polyline points="21 15 16 10 5 21"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+    <polyline points="21 15 16 10 5 21" />
   </svg>
 );
 
 const TemplatesIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14 2 14 8 20 8"/>
-    <line x1="8" y1="13" x2="16" y2="13"/>
-    <line x1="8" y1="17" x2="12" y2="17"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="8" y1="13" x2="16" y2="13" />
+    <line x1="8" y1="17" x2="12" y2="17" />
   </svg>
 );
 
 const MicrositeIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <line x1="2" y1="12" x2="22" y2="12"/>
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
   </svg>
 );
 
 const AIIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z" />
   </svg>
 );
 
 const ChevronRight = ({ color = "#c5c2be" }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round">
-    <polyline points="9 18 15 12 9 6"/>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth="2.5"
+    strokeLinecap="round"
+  >
+    <polyline points="9 18 15 12 9 6" />
   </svg>
 );
 
 const LogoutIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-    <polyline points="16 17 21 12 16 7"/>
-    <line x1="21" y1="12" x2="9" y2="12"/>
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
   </svg>
 );
 
@@ -88,7 +169,13 @@ function Avatar({ size = 32 }) {
 }
 // ── Menu Item ──────────────────────────────────────────────────
 
-function MenuItem({ icon: Icon, label, description, disabled = false, onClick }) {
+function MenuItem({
+  icon: Icon,
+  label,
+  description,
+  disabled = false,
+  onClick,
+}) {
   const [pressed, setPressed] = useState(false);
 
   const iconBg = disabled ? "bg-[#f5f4f1]" : "bg-[#fdf6e8]";
@@ -118,16 +205,22 @@ function MenuItem({ icon: Icon, label, description, disabled = false, onClick })
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       {/* Icon badge */}
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-150 ${iconBg} ${iconColor}`}>
+      <div
+        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-150 ${iconBg} ${iconColor}`}
+      >
         <Icon />
       </div>
 
       {/* Text */}
       <div className="flex-1 min-w-0">
-        <p className={`m-0 text-[15px] font-semibold font-sans tracking-tight ${labelColor}`}>
+        <p
+          className={`m-0 text-[15px] font-semibold font-sans tracking-tight ${labelColor}`}
+        >
           {label}
         </p>
-        <p className={`mt-1 m-0 text-[13px] font-normal font-sans ${descColor}`}>
+        <p
+          className={`mt-1 m-0 text-[13px] font-normal font-sans ${descColor}`}
+        >
           {description}
         </p>
       </div>
@@ -140,16 +233,30 @@ function MenuItem({ icon: Icon, label, description, disabled = false, onClick })
 
 // ── Profile Avatar Section ─────────────────────────────────────
 
-function ProfileHeader() {
+function ProfileHeader({ user }) {
+  const displayName = user?.name || "User";
+  const role = user?.role || "User";
+  const venueName = user?.venue?.name || "Venue";
+  const initial = displayName.charAt(0).toUpperCase();
+
   return (
     <div className="flex items-center gap-4 py-5 px-5 rounded-2xl bg-[#faf9f7] border border-[#f1f0ee] shadow-sm">
-      <Avatar size={52} />
+      <div
+        className="rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+        style={{
+          width: 52,
+          height: 52,
+          background: "linear-gradient(135deg, #7c6fcd, #5ab99c)",
+        }}
+      >
+        {initial}
+      </div>
       <div className="min-w-0">
         <p className="m-0 text-lg font-bold text-[#1a1917] font-serif tracking-tight">
-          Alex Johnson
+          {displayName}
         </p>
         <p className="mt-0.5 m-0 text-sm text-[#6b6966] font-sans">
-          Sales Manager · Acme Venues
+          {role.charAt(0).toUpperCase() + role.slice(1)} · {venueName}
         </p>
       </div>
     </div>
@@ -169,23 +276,36 @@ function SectionLabel({ children }) {
 // ── Profile Page ───────────────────────────────────────────────
 
 const VENUE_ITEMS = [
-  { icon: VenueIcon,    label: "Venue Profile",  description: "Basic info, address, contact" },
-  { icon: SpacesIcon,   label: "Spaces",          description: "Manage venue spaces" },
-  { icon: PricingIcon,  label: "Pricing",         description: "Rack rates, add-ons" },
-  { icon: GalleryIcon,  label: "Gallery",         description: "Photos and albums" },
-  { icon: TemplatesIcon,label: "Templates",       description: "Message templates" },
-  { icon: MicrositeIcon,label: "Microsite",       description: "Public venue page" },
+  {
+    icon: VenueIcon,
+    label: "Venue Profile",
+    description: "Basic info, address, contact",
+  },
+  { icon: SpacesIcon, label: "Spaces", description: "Manage venue spaces" },
+  { icon: PricingIcon, label: "Pricing", description: "Rack rates, add-ons" },
+  { icon: GalleryIcon, label: "Gallery", description: "Photos and albums" },
+  { icon: TemplatesIcon, label: "Templates", description: "Message templates" },
+  { icon: MicrositeIcon, label: "Microsite", description: "Public venue page" },
 ];
 
 export default function Profile() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { user, loading } = useAuth();
   const [activeItem, setActiveItem] = useState(null);
 
   const handleLogout = () => {
     dispatch(logout());
     navigate("/login");
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col max-w-[600px] w-full font-sans">
+        <div className="text-center py-8">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col max-w-[600px] w-full font-sans">
@@ -198,7 +318,7 @@ export default function Profile() {
       </header>
 
       {/* User info card */}
-      <ProfileHeader />
+      <ProfileHeader user={user} />
 
       {/* Venue settings */}
       <SectionLabel>Venue Settings</SectionLabel>

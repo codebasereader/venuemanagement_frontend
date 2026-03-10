@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
+import { Modal, message } from "antd";
 import SectionCard, { SectionLabel } from "./SectionCard";
 import ContactCard from "./ContactCard";
 import AddContactModal from "./AddContactModal";
@@ -26,46 +27,64 @@ const PlusIcon = () => (
   </svg>
 );
 
-const initialContacts = [
-  { id: "1", name: "Alex Johnson", designation: "Sales Manager", number: "+91 98765 43210" },
-];
-
-export default function ContactsSection() {
-  const [contacts, setContacts] = useState(initialContacts);
+export default function ContactsSection({ contacts = [], onSaveContact, onDeleteContact, saving = false }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
+  const [msgApi, contextHolder] = message.useMessage();
 
   const handleAdd = () => {
     setEditingContact(null);
     setModalOpen(true);
   };
 
-  const handleSave = (payload) => {
-    if (payload.id) {
-      setContacts((prev) =>
-        prev.map((c) => (c.id === payload.id ? { ...c, ...payload } : c))
-      );
-    } else {
-      setContacts((prev) => [
-        ...prev,
-        { ...payload, id: String(Date.now()) },
-      ]);
-    }
-    setModalOpen(false);
-    setEditingContact(null);
-  };
+  const handleSave = useCallback(
+    async (payload) => {
+      try {
+        await onSaveContact?.(payload);
+        setModalOpen(false);
+        setEditingContact(null);
+        msgApi.success(payload?._id ? "Contact updated" : "Contact added");
+      } catch (err) {
+        msgApi.error(err?.message ?? "Failed to save contact");
+      }
+    },
+    [msgApi, onSaveContact],
+  );
 
   const handleEdit = (contact) => {
     setEditingContact(contact);
     setModalOpen(true);
   };
 
-  const handleDelete = (contact) => {
-    setContacts((prev) => prev.filter((c) => c.id !== contact.id));
-  };
+  const confirmDelete = useCallback(
+    (contact) => {
+      Modal.confirm({
+        centered: true,
+        title: "Delete contact?",
+        content: `This will delete ${contact?.name || "this contact"}.`,
+        okText: "Delete",
+        okButtonProps: { danger: true },
+        cancelText: "Cancel",
+        onOk: async () => {
+          try {
+            await onDeleteContact?.(contact);
+            msgApi.success("Contact deleted");
+          } catch (err) {
+            msgApi.error(err?.message ?? "Failed to delete contact");
+          }
+        },
+      });
+    },
+    [msgApi, onDeleteContact],
+  );
+
+  const orderedContacts = useMemo(() => {
+    return [...contacts].filter(Boolean);
+  }, [contacts]);
 
   return (
     <>
+      {contextHolder}
       <div style={{ marginBottom: "10px" }}>
         <SectionLabel>Contacts</SectionLabel>
       </div>
@@ -95,6 +114,9 @@ export default function ContactsSection() {
             type="button"
             onClick={handleAdd}
             style={addBtnStyle}
+            disabled={saving}
+            aria-disabled={saving}
+            aria-busy={saving}
             onMouseEnter={(e) => (e.currentTarget.style.background = "#3d3b38")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "#1a1917")}
           >
@@ -102,7 +124,7 @@ export default function ContactsSection() {
           </button>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {contacts.length === 0 ? (
+          {orderedContacts.length === 0 ? (
             <p
               style={{
                 margin: 0,
@@ -115,12 +137,12 @@ export default function ContactsSection() {
               No contacts yet. Click Add to add one.
             </p>
           ) : (
-            contacts.map((contact) => (
+            orderedContacts.map((contact) => (
               <ContactCard
-                key={contact.id}
+                key={contact._id ?? `${contact?.name}-${contact?.contactNumber}`}
                 contact={contact}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
+                onDelete={confirmDelete}
               />
             ))
           )}

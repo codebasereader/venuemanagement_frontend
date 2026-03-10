@@ -16,6 +16,7 @@ export default function VenueBuyout({
   addons = [],
   onAddonsChange,
   onSave,
+  saving = false,
 }) {
   const handleSave = useCallback(() => {
     onSave?.({
@@ -44,6 +45,7 @@ export default function VenueBuyout({
           <button
             type="button"
             onClick={handleSave}
+            disabled={saving}
             style={{
               display: "flex",
               alignItems: "center",
@@ -65,7 +67,7 @@ export default function VenueBuyout({
               <polyline points="17 21 17 13 7 13 7 21" />
               <polyline points="7 3 7 8 15 8" />
             </svg>
-            Save
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
       )}

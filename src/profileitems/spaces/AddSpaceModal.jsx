@@ -33,10 +33,13 @@ const btnBase = {
   transition: "background 0.15s",
 };
 
-const MAX_IMAGES = 3;
+const MAX_IMAGES = 5;
 
-function ImageSlot({ value, onChange, onRemove, index }) {
+function ImageSlot({ value, onChange, onRemove, index, canRemove }) {
   const inputRef = useRef(null);
+  const url = value && typeof value === "object" && value instanceof File
+    ? URL.createObjectURL(value)
+    : typeof value === "string" ? value : null;
 
   return (
     <div
@@ -61,62 +64,38 @@ function ImageSlot({ value, onChange, onRemove, index }) {
         style={{ display: "none" }}
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) onChange(file, index);
+          if (file && file.type.startsWith("image/")) onChange(file, index);
           e.target.value = "";
         }}
       />
       {value ? (
         <>
           <img
-            src={typeof value === "string" ? value : URL.createObjectURL(value)}
+            src={url}
             alt={`Space ${index + 1}`}
-            style={{
-              width: "100%",
-              height: "100px",
-              objectFit: "cover",
-              display: "block",
-            }}
+            style={{ width: "100%", height: "100px", objectFit: "cover", display: "block" }}
           />
           <div style={{ position: "absolute", top: "6px", right: "6px", display: "flex", gap: "4px" }}>
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
               style={{
-                width: "28px",
-                height: "28px",
-                borderRadius: "8px",
-                border: "none",
-                background: "rgba(255,255,255,0.9)",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#1a1917",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+                width: "28px", height: "28px", borderRadius: "8px", border: "none",
+                background: "rgba(255,255,255,0.9)", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
               }}
               title="Change image"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <path d="M21 15l-5-5L5 21" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </button>
-            {onRemove && (
+            {canRemove && (
               <button
                 type="button"
                 onClick={() => onRemove(index)}
                 style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: "rgba(253,232,230,0.95)",
-                  color: "#d94f3d",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  width: "28px", height: "28px", borderRadius: "8px", border: "none",
+                  background: "rgba(253,232,230,0.95)", color: "#d94f3d", cursor: "pointer",
                   boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
                 }}
                 title="Remove image"
@@ -136,14 +115,8 @@ function ImageSlot({ value, onChange, onRemove, index }) {
           type="button"
           onClick={() => inputRef.current?.click()}
           style={{
-            width: "100%",
-            height: "100%",
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-            fontSize: "13px",
-            color: "#9a9896",
-            fontFamily: "'DM Sans', sans-serif",
+            width: "100%", height: "100%", border: "none", background: "transparent",
+            cursor: "pointer", fontSize: "13px", color: "#9a9896", fontFamily: "'DM Sans', sans-serif",
           }}
         >
           + Add image {index + 1}
@@ -154,36 +127,36 @@ function ImageSlot({ value, onChange, onRemove, index }) {
 }
 
 export default function AddSpaceModal({ isOpen, onClose, onSave, editSpace = null }) {
-  const [spaceName, setSpaceName] = useState("");
-  const [maxGuests, setMaxGuests] = useState("");
-  const [dimension, setDimension] = useState("");
+  const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [images, setImages] = useState([null, null, null]); // up to 3: File or data URL
+  const [capacity, setCapacity] = useState("");
+  const [dimensions, setDimensions] = useState("");
+  const [images, setImages] = useState(() => Array(MAX_IMAGES).fill(null));
 
   const isEdit = Boolean(editSpace);
 
   useEffect(() => {
     if (editSpace) {
-      setSpaceName(editSpace.spaceName || "");
-      setMaxGuests(editSpace.maxGuests ?? "");
-      setDimension(editSpace.dimension || "");
-      setDescription(editSpace.description || "");
+      setName(editSpace.name ?? editSpace.spaceName ?? "");
+      setDescription(editSpace.description ?? "");
+      setCapacity(editSpace.capacity != null ? String(editSpace.capacity) : "");
+      setDimensions(editSpace.dimensions ?? editSpace.dimension ?? editSpace.metadata?.dimension ?? "");
       const imgs = [...(editSpace.images || [])];
       while (imgs.length < MAX_IMAGES) imgs.push(null);
       setImages(imgs.slice(0, MAX_IMAGES));
     } else {
-      setSpaceName("");
-      setMaxGuests("");
-      setDimension("");
+      setName("");
       setDescription("");
-      setImages([null, null, null]);
+      setCapacity("");
+      setDimensions("");
+      setImages(Array(MAX_IMAGES).fill(null));
     }
   }, [editSpace, isOpen]);
 
-  const setImageAt = (fileOrUrl, index) => {
+  const setImageAt = (file, index) => {
     setImages((prev) => {
       const next = [...prev];
-      next[index] = fileOrUrl;
+      next[index] = file;
       return next;
     });
   };
@@ -200,15 +173,14 @@ export default function AddSpaceModal({ isOpen, onClose, onSave, editSpace = nul
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (imageCount < 1) return;
     const payload = {
-      spaceName: spaceName.trim(),
-      maxGuests: maxGuests.trim(),
-      dimension: dimension.trim(),
+      name: name.trim(),
       description: description.trim(),
-      images: images.filter(Boolean).map((img) => (typeof img === "string" ? img : img)),
+      capacity: capacity.trim() === "" ? undefined : Number(capacity),
+      dimensions: dimensions.trim() || undefined,
+      images: images.filter(Boolean),
     };
-    if (editSpace?.id) payload.id = editSpace.id;
+    if (editSpace?._id) payload._id = editSpace._id;
     onSave(payload);
     onClose();
   };
@@ -255,63 +227,58 @@ export default function AddSpaceModal({ isOpen, onClose, onSave, editSpace = nul
           {isEdit ? "Edit Space" : "Add Space"}
         </h3>
         <form onSubmit={handleSubmit}>
-          <label style={labelStyle}>Images (min 1, max 3)</label>
-          {[0, 1, 2].map((i) => (
+          <label style={labelStyle}>Images (optional — S3 upload coming later)</label>
+          {Array.from({ length: MAX_IMAGES }, (_, i) => (
             <ImageSlot
               key={i}
               index={i}
               value={images[i]}
-              onChange={(file) => setImageAt(file, i)}
-              onRemove={imageCount > 1 ? removeImageAt : undefined}
+              onChange={setImageAt}
+              onRemove={removeImageAt}
+              canRemove={imageCount > 1}
             />
           ))}
-          {imageCount < 1 && (
-            <p style={{ margin: "-4px 0 12px", fontSize: "12px", color: "#d94f3d" }}>
-              At least one image is required.
-            </p>
-          )}
 
           <label style={labelStyle}>
-            Space name
-            <input
-              type="text"
-              placeholder="e.g. Grand lawn"
-              value={spaceName}
-              onChange={(e) => setSpaceName(e.target.value)}
-              style={inputStyle}
-              required
-            />
+            Space name <span style={{ color: "#d94f3d" }}>*</span>
           </label>
-          <label style={labelStyle}>
-            Max guests
-            <input
-              type="text"
-              placeholder="e.g. 800"
-              value={maxGuests}
-              onChange={(e) => setMaxGuests(e.target.value)}
-              style={inputStyle}
-            />
-          </label>
-          <label style={labelStyle}>
-            Dimension
-            <input
-              type="text"
-              placeholder="e.g. 7000 sq ft"
-              value={dimension}
-              onChange={(e) => setDimension(e.target.value)}
-              style={inputStyle}
-            />
-          </label>
-          <label style={labelStyle}>
-            Description
-            <textarea
-              placeholder="Brief description of the space"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }}
-              rows={3}
-            />
-          </label>
+          <input
+            type="text"
+            placeholder="e.g. Main Hall"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={inputStyle}
+            required
+          />
+
+          <label style={labelStyle}>Description</label>
+          <textarea
+            placeholder="Brief description of the space"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }}
+            rows={3}
+          />
+
+          <label style={labelStyle}>Capacity (e.g. seats)</label>
+          <input
+            type="number"
+            min={0}
+            placeholder="e.g. 200"
+            value={capacity}
+            onChange={(e) => setCapacity(e.target.value)}
+            style={inputStyle}
+          />
+
+          <label style={labelStyle}>Dimensions</label>
+          <input
+            type="text"
+            placeholder="e.g. 40ft x 60ft"
+            value={dimensions}
+            onChange={(e) => setDimensions(e.target.value)}
+            style={inputStyle}
+          />
+
           <div
             style={{
               display: "flex",
@@ -335,18 +302,13 @@ export default function AddSpaceModal({ isOpen, onClose, onSave, editSpace = nul
             </button>
             <button
               type="submit"
-              disabled={imageCount < 1}
               style={{
                 ...btnBase,
-                background: imageCount < 1 ? "#d8d5d0" : "#1a1917",
+                background: "#1a1917",
                 color: "white",
               }}
-              onMouseEnter={(e) => {
-                if (imageCount >= 1) e.currentTarget.style.background = "#3d3b38";
-              }}
-              onMouseLeave={(e) => {
-                if (imageCount >= 1) e.currentTarget.style.background = "#1a1917";
-              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#3d3b38")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#1a1917")}
             >
               {isEdit ? "Update" : "Add Space"}
             </button>

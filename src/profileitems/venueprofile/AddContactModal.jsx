@@ -36,7 +36,7 @@ const btnBase = {
 export default function AddContactModal({ isOpen, onClose, onSave, editContact = null }) {
   const [name, setName] = useState("");
   const [designation, setDesignation] = useState("");
-  const [number, setNumber] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
 
   const isEdit = Boolean(editContact);
 
@@ -44,18 +44,18 @@ export default function AddContactModal({ isOpen, onClose, onSave, editContact =
     if (editContact) {
       setName(editContact.name || "");
       setDesignation(editContact.designation || "");
-      setNumber(editContact.number || "");
+      setContactNumber(editContact.contactNumber || "");
     } else {
       setName("");
       setDesignation("");
-      setNumber("");
+      setContactNumber("");
     }
   }, [editContact, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const payload = { name, designation, number };
-    if (editContact?.id) payload.id = editContact.id;
+    const payload = { name, designation, contactNumber };
+    if (editContact?._id) payload._id = editContact._id;
     onSave(payload);
     onClose();
   };
@@ -128,8 +128,8 @@ export default function AddContactModal({ isOpen, onClose, onSave, editContact =
             <input
               type="tel"
               placeholder="+91 98765 43210"
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
+              value={contactNumber}
+              onChange={(e) => setContactNumber(e.target.value)}
               style={{ ...inputStyle, marginBottom: "20px" }}
               required
             />

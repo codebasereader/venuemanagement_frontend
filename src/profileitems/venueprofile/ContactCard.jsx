@@ -30,7 +30,7 @@ const iconBtnStyle = {
 };
 
 export default function ContactCard({ contact, onEdit, onDelete }) {
-  const { name, designation, number } = contact;
+  const { name, designation, contactNumber } = contact;
 
   return (
     <div
@@ -76,7 +76,7 @@ export default function ContactCard({ contact, onEdit, onDelete }) {
             fontFamily: "'DM Sans', sans-serif",
           }}
         >
-          {number}
+          {contactNumber}
         </p>
       </div>
       <div style={{ display: "flex", gap: "8px" }}>

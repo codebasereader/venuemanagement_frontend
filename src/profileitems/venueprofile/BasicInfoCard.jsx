@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import SectionCard from "./SectionCard";
 
 const labelStyle = {
@@ -23,27 +23,30 @@ const inputStyle = {
   boxSizing: "border-box",
 };
 
+const readOnlyInputStyle = {
+  ...inputStyle,
+  background: "#f5f4f1",
+  color: "#6b6966",
+  cursor: "not-allowed",
+};
+
 const textareaStyle = {
   ...inputStyle,
   minHeight: "100px",
   resize: "vertical",
 };
 
-export default function BasicInfoCard() {
-  const [venueName, setVenueName] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [description, setDescription] = useState("");
-
+export default function BasicInfoCard({ venueName = "", tagline = "", description = "", onChange }) {
   return (
     <SectionCard>
       <label style={labelStyle}>
         Venue Name
         <input
           type="text"
-          placeholder="Enter venue name"
+          placeholder="Venue name"
           value={venueName}
-          onChange={(e) => setVenueName(e.target.value)}
-          style={inputStyle}
+          readOnly
+          style={readOnlyInputStyle}
         />
       </label>
       <label style={labelStyle}>
@@ -52,7 +55,7 @@ export default function BasicInfoCard() {
           type="text"
           placeholder="Short tagline for your venue"
           value={tagline}
-          onChange={(e) => setTagline(e.target.value)}
+          onChange={(e) => onChange?.({ tagline: e.target.value })}
           style={inputStyle}
         />
       </label>
@@ -61,7 +64,7 @@ export default function BasicInfoCard() {
         <textarea
           placeholder="Describe your venue"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => onChange?.({ description: e.target.value })}
           style={textareaStyle}
         />
       </label>

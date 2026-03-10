@@ -9,7 +9,9 @@ const TrashIcon = ({ size = 18 }) => (
   </svg>
 );
 
-export default function GalleryImageCard({ imageUrl, onDelete }) {
+export default function GalleryImageCard({ imageUrl, photo, onDelete, deleting }) {
+  const url = photo?.url ?? imageUrl;
+  const photoId = photo?._id ?? photo?.id;
   return (
     <div
       style={{
@@ -21,7 +23,7 @@ export default function GalleryImageCard({ imageUrl, onDelete }) {
       }}
     >
       <img
-        src={imageUrl}
+        src={url}
         alt=""
         style={{
           width: "100%",
@@ -30,34 +32,37 @@ export default function GalleryImageCard({ imageUrl, onDelete }) {
           display: "block",
         }}
       />
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete?.();
-        }}
-        aria-label="Delete image"
-        style={{
-          position: "absolute",
-          top: "8px",
-          right: "8px",
-          width: "32px",
-          height: "32px",
-          borderRadius: "8px",
-          border: "none",
-          background: "rgba(26, 25, 23, 0.75)",
-          color: "white",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transition: "background 0.15s",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(26, 25, 23, 0.9)")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(26, 25, 23, 0.75)")}
-      >
-        <TrashIcon />
-      </button>
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!deleting) onDelete(photoId);
+          }}
+          disabled={deleting}
+          aria-label="Delete image"
+          style={{
+            position: "absolute",
+            top: "8px",
+            right: "8px",
+            width: "32px",
+            height: "32px",
+            borderRadius: "8px",
+            border: "none",
+            background: deleting ? "rgba(100,100,100,0.7)" : "rgba(26, 25, 23, 0.75)",
+            color: "white",
+            cursor: deleting ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={(e) => { if (!deleting) e.currentTarget.style.background = "rgba(26, 25, 23, 0.9)"; }}
+          onMouseLeave={(e) => { if (!deleting) e.currentTarget.style.background = "rgba(26, 25, 23, 0.75)"; }}
+        >
+          <TrashIcon />
+        </button>
+      )}
     </div>
   );
 }

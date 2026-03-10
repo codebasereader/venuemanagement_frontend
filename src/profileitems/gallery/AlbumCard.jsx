@@ -20,28 +20,33 @@ const BubbleIcon = ({ size = 48 }) => (
 
 const placeholderIcons = [FolderIcon, StarIcon, BubbleIcon];
 
-export default function AlbumCard({ album, onClick }) {
-  const images = album.images || [];
-  const count = images.length;
-  const coverUrl = images[0];
+const TrashIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
+  </svg>
+);
+
+export default function AlbumCard({ album, onClick, onDelete }) {
+  // API: coverImage; legacy/local: first of images array
+  const coverUrl = album.coverImage || (album.images && album.images[0]) || (album.photos?.[0]?.url);
+  const count = album.photoCount ?? (album.photos?.length ?? album.images?.length ?? 0);
   const PlaceholderIcon = placeholderIcons[Math.abs(album.name?.length || 0) % placeholderIcons.length];
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       style={{
         width: "100%",
-        padding: 0,
-        border: "none",
         borderRadius: "12px",
         background: "white",
         boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px #f1f0ee",
         overflow: "hidden",
-        cursor: "pointer",
         textAlign: "left",
         fontFamily: "'DM Sans', sans-serif",
         transition: "box-shadow 0.15s, transform 0.15s",
+        position: "relative",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px #e8e6e2";
@@ -52,49 +57,94 @@ export default function AlbumCard({ album, onClick }) {
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
-      <div
+      <button
+        type="button"
+        onClick={onClick}
         style={{
-          aspectRatio: "4/3",
-          background: "#faf9f7",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
+          width: "100%",
+          padding: 0,
+          border: "none",
+          background: "none",
+          cursor: "pointer",
+          textAlign: "left",
+          font: "inherit",
+          color: "inherit",
         }}
       >
-        {coverUrl ? (
-          <img
-            src={coverUrl}
-            alt=""
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
-          />
-        ) : (
-          <PlaceholderIcon />
-        )}
-      </div>
-      <div style={{ padding: "14px 16px" }}>
         <div
           style={{
-            fontSize: "15px",
-            fontWeight: 700,
-            color: "#1a1917",
-            marginBottom: "4px",
+            aspectRatio: "4/3",
+            background: "#faf9f7",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            position: "relative",
           }}
         >
-          {album.name || "Untitled"}
+          {onDelete && (
+            <button
+              type="button"
+              aria-label="Delete album"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onDelete();
+              }}
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                zIndex: 1,
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                border: "none",
+                background: "rgba(26,25,23,0.75)",
+                color: "white",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <TrashIcon />
+            </button>
+          )}
+          {coverUrl ? (
+            <img
+              src={coverUrl}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          ) : (
+            <PlaceholderIcon />
+          )}
         </div>
-        <div style={{ fontSize: "13px", color: "#6b6966" }}>
-          {count === 1 ? "1 image" : `${count} images`}
+        <div style={{ padding: "14px 16px" }}>
+          <div
+            style={{
+              fontSize: "15px",
+              fontWeight: 700,
+              color: "#1a1917",
+              marginBottom: "4px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {album.name || "Untitled"}
+          </div>
+          <div style={{ fontSize: "13px", color: "#6b6966" }}>
+            {count === 1 ? "1 image" : `${count} images`}
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import SectionCard from "./SectionCard";
 
 const labelStyle = {
@@ -29,13 +29,11 @@ const rowStyle = {
   gap: "12px",
 };
 
-export default function AddressCard() {
-  const [street, setStreet] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [pincode, setPincode] = useState("");
-  const [mapUrl, setMapUrl] = useState("");
-
+export default function AddressCard({
+  address = {},
+  googleMapUrl = "",
+  onChange,
+}) {
   return (
     <SectionCard>
       <label style={labelStyle}>
@@ -43,8 +41,8 @@ export default function AddressCard() {
         <input
           type="text"
           placeholder="Street address"
-          value={street}
-          onChange={(e) => setStreet(e.target.value)}
+          value={address?.line1 ?? ""}
+          onChange={(e) => onChange?.({ address: { ...address, line1: e.target.value } })}
           style={inputStyle}
         />
       </label>
@@ -54,8 +52,8 @@ export default function AddressCard() {
           <input
             type="text"
             placeholder="City"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
+            value={address?.city ?? ""}
+            onChange={(e) => onChange?.({ address: { ...address, city: e.target.value } })}
             style={inputStyle}
           />
         </label>
@@ -64,8 +62,8 @@ export default function AddressCard() {
           <input
             type="text"
             placeholder="State"
-            value={state}
-            onChange={(e) => setState(e.target.value)}
+            value={address?.state ?? ""}
+            onChange={(e) => onChange?.({ address: { ...address, state: e.target.value } })}
             style={inputStyle}
           />
         </label>
@@ -74,8 +72,8 @@ export default function AddressCard() {
           <input
             type="text"
             placeholder="Pincode"
-            value={pincode}
-            onChange={(e) => setPincode(e.target.value)}
+            value={address?.pincode ?? ""}
+            onChange={(e) => onChange?.({ address: { ...address, pincode: e.target.value } })}
             style={inputStyle}
           />
         </label>
@@ -85,8 +83,8 @@ export default function AddressCard() {
         <input
           type="url"
           placeholder="https://maps.google.com/..."
-          value={mapUrl}
-          onChange={(e) => setMapUrl(e.target.value)}
+          value={googleMapUrl}
+          onChange={(e) => onChange?.({ googleMapUrl: e.target.value })}
           style={{ ...inputStyle, marginBottom: 0 }}
         />
       </label>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import SectionCard from "./SectionCard";
 
 const labelStyle = {
@@ -23,12 +23,13 @@ const inputStyle = {
   boxSizing: "border-box",
 };
 
-export default function SocialsCard() {
-  const [instagram, setInstagram] = useState("");
-  const [facebook, setFacebook] = useState("");
-  const [email, setEmail] = useState("");
-  const [website, setWebsite] = useState("");
-
+export default function SocialsCard({
+  instagram = "",
+  facebook = "",
+  email = "",
+  website = "",
+  onChange,
+}) {
   return (
     <SectionCard>
       <label style={labelStyle}>
@@ -37,7 +38,7 @@ export default function SocialsCard() {
           type="url"
           placeholder="https://instagram.com/..."
           value={instagram}
-          onChange={(e) => setInstagram(e.target.value)}
+          onChange={(e) => onChange?.({ instagram: e.target.value })}
           style={inputStyle}
         />
       </label>
@@ -47,7 +48,7 @@ export default function SocialsCard() {
           type="url"
           placeholder="https://facebook.com/..."
           value={facebook}
-          onChange={(e) => setFacebook(e.target.value)}
+          onChange={(e) => onChange?.({ facebook: e.target.value })}
           style={inputStyle}
         />
       </label>
@@ -57,7 +58,7 @@ export default function SocialsCard() {
           type="email"
           placeholder="venue@example.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => onChange?.({ email: e.target.value })}
           style={inputStyle}
         />
       </label>
@@ -67,7 +68,7 @@ export default function SocialsCard() {
           type="url"
           placeholder="https://..."
           value={website}
-          onChange={(e) => setWebsite(e.target.value)}
+          onChange={(e) => onChange?.({ website: e.target.value })}
           style={{ ...inputStyle, marginBottom: 0 }}
         />
       </label>

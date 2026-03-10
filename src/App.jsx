@@ -9,10 +9,10 @@ import VenueProfile from "./profileitems/venueprofile/VenueProfile";
 import ViewSpaces from "./profileitems/spaces/ViewSpaces";
 import PricingHome from "./profileitems/pricing/PricingHome";
 import GalleryHome from "./profileitems/gallery/GalleryHome";
-import ViewUsers from "./pages/admin/ViewUsers";
-import ViewVenues from "./pages/admin/ViewVenues";
 import LoginPage from "./pages/login/LoginPage";
 import { ROLES } from "../config";
+import ViewUsers from "./pages/admin/users/ViewUsers";
+import ViewVenues from "./pages/admin/venues/ViewVenues";
 
 function LoginGuard() {
   const { is_logged_in, role } = useSelector((state) => state.user.value);

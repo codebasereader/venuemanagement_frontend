@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 const labelStyle = {
   display: "block",
@@ -37,17 +37,42 @@ const GOLD = "#c9a84c";
 
 export default function AddAlbumModal({ isOpen, onClose, onSave }) {
   const [albumName, setAlbumName] = useState("");
+  const [description, setDescription] = useState("");
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen) setAlbumName("");
+    if (isOpen) {
+      setAlbumName("");
+      setDescription("");
+      setCoverFile(null);
+      setCoverPreview(null);
+    }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!coverFile) {
+      setCoverPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(coverFile);
+    setCoverPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [coverFile]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const name = albumName.trim();
     if (!name) return;
-    onSave(name);
+    onSave({ name, description: description.trim() || undefined, coverFile: coverFile || undefined });
     onClose();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    setCoverFile(file || null);
+    e.target.value = "";
   };
 
   if (!isOpen) return null;
@@ -75,6 +100,8 @@ export default function AddAlbumModal({ isOpen, onClose, onSave }) {
           padding: "24px",
           maxWidth: "400px",
           width: "100%",
+          maxHeight: "90vh",
+          overflow: "auto",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -94,13 +121,91 @@ export default function AddAlbumModal({ isOpen, onClose, onSave }) {
             Album Name
             <input
               type="text"
-              placeholder="e.g. Decorated, Events"
+              placeholder="e.g. Wedding Events, Corporate"
               value={albumName}
               onChange={(e) => setAlbumName(e.target.value)}
               style={inputStyle}
               required
               autoFocus
             />
+          </label>
+          <label style={labelStyle}>
+            Description
+            <textarea
+              placeholder="Optional description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              style={{ ...inputStyle, minHeight: "72px", resize: "vertical" }}
+              rows={3}
+            />
+          </label>
+          <label style={labelStyle}>
+            Cover image
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+            <div style={{ marginBottom: 16 }}>
+              {coverPreview ? (
+                <div style={{ position: "relative", display: "inline-block" }}>
+                  <img
+                    src={coverPreview}
+                    alt="Cover preview"
+                    style={{
+                      width: "100%",
+                      maxHeight: 160,
+                      objectFit: "cover",
+                      borderRadius: 10,
+                      border: "1px solid #e8e6e2",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCoverFile(null);
+                      setCoverPreview(null);
+                      fileInputRef.current?.value && (fileInputRef.current.value = "");
+                    }}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "rgba(26,25,23,0.8)",
+                      color: "white",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    width: "100%",
+                    padding: "24px",
+                    borderRadius: 10,
+                    border: "1px dashed #e8e6e2",
+                    background: "#faf9f7",
+                    color: "#6b6966",
+                    fontSize: 14,
+                    fontFamily: "'DM Sans', sans-serif",
+                    cursor: "pointer",
+                  }}
+                >
+                  Choose cover image (optional)
+                </button>
+              )}
+            </div>
           </label>
           <div
             style={{

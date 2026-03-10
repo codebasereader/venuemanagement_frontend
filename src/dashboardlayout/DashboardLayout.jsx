@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { logout, updateUser } from "../reducers/user";
-import { getCurrentUser } from "../api/auth";
+import { fetchCurrentUser, logout } from "../reducers/user";
 import { ROLES } from "../../config";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
@@ -93,8 +92,8 @@ const inchargeNavItems = [
 ];
 
 const adminNavItems = [
-  { path: "/users", label: "View Users", icon: UsersIcon, end: false },
   { path: "/venues", label: "View Venues", icon: VenuesIcon, end: false },
+  { path: "/users", label: "View Users", icon: UsersIcon, end: false },
 ];
 
 // ── Avatar ─────────────────────────────────────────────────────────────────
@@ -166,19 +165,6 @@ function BottomNavItem({ path, label, icon: Icon, end }) {
 
 // ── Layout ─────────────────────────────────────────────────────────────────
 
-function mapApiUserToState(data) {
-  const user = data?.user ?? data;
-  if (!user?.role) return null;
-  return {
-    id: user._id ?? user.id,
-    name: user.name ?? "",
-    role: user.role ?? "",
-    email_id: user.email ?? user.email_id ?? "",
-    venueId: user.venueId ?? null,
-    ...(data?.token != null && { access_token: data.token }),
-  };
-}
-
 export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -203,12 +189,7 @@ export default function DashboardLayout() {
 
   useEffect(() => {
     if (!access_token) return;
-    getCurrentUser(access_token)
-      .then((data) => {
-        const payload = mapApiUserToState(data);
-        if (payload) dispatch(updateUser(payload));
-      })
-      .catch(() => {});
+    dispatch(fetchCurrentUser(access_token));
   }, [access_token, dispatch]);
 
   return (

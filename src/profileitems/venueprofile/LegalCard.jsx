@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import SectionCard from "./SectionCard";
 
 const labelStyle = {
@@ -23,10 +23,9 @@ const inputStyle = {
   boxSizing: "border-box",
 };
 
-export default function LegalCard() {
-  const [legalName, setLegalName] = useState("");
-  const [gst, setGst] = useState("");
-  const [pan, setPan] = useState("");
+export default function LegalCard({ legal = {}, onChange }) {
+  const businessName = legal?.businessName ?? legal?.legalName ?? "";
+  const gst = legal?.gst ?? "";
 
   return (
     <SectionCard>
@@ -35,8 +34,10 @@ export default function LegalCard() {
         <input
           type="text"
           placeholder="Registered business name"
-          value={legalName}
-          onChange={(e) => setLegalName(e.target.value)}
+          value={businessName}
+          onChange={(e) =>
+            onChange?.({ legal: { ...legal, businessName: e.target.value } })
+          }
           style={inputStyle}
         />
       </label>
@@ -46,17 +47,7 @@ export default function LegalCard() {
           type="text"
           placeholder="GST number"
           value={gst}
-          onChange={(e) => setGst(e.target.value)}
-          style={inputStyle}
-        />
-      </label>
-      <label style={labelStyle}>
-        PAN
-        <input
-          type="text"
-          placeholder="PAN number"
-          value={pan}
-          onChange={(e) => setPan(e.target.value)}
+          onChange={(e) => onChange?.({ legal: { ...legal, gst: e.target.value } })}
           style={{ ...inputStyle, marginBottom: 0 }}
         />
       </label>

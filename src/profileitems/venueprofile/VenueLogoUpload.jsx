@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import SectionCard from "./SectionCard";
 
 const UploadIcon = () => (
@@ -44,17 +44,30 @@ const btnBase = {
   transition: "background 0.15s, color 0.15s",
 };
 
-export default function VenueLogoUpload() {
-  const [preview, setPreview] = useState(null);
+export default function VenueLogoUpload({ logo = "", onChange, onFileSelect }) {
+  const [preview, setPreview] = useState(logo || null);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+  useEffect(() => {
+    setPreview(logo || null);
+  }, [logo]);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      const url = URL.createObjectURL(file);
-      setPreview(url);
-    }
     e.target.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+    if (onFileSelect) {
+      setUploading(true);
+      try {
+        await onFileSelect(file);
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    onChange?.({ logo: url });
   };
 
   const handleEdit = () => {
@@ -64,11 +77,31 @@ export default function VenueLogoUpload() {
   const handleDelete = () => {
     if (preview) URL.revokeObjectURL(preview);
     setPreview(null);
+    onChange?.({ logo: "" });
   };
 
   return (
     <SectionCard>
-      {!preview ? (
+      {uploading ? (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "32px 24px",
+            border: "2px dashed #e8e6e2",
+            borderRadius: "12px",
+            background: "#faf9f7",
+            color: "#9a9896",
+            fontSize: "14px",
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          <span>Uploading…</span>
+        </div>
+      ) : !preview ? (
         <label
           style={{
             display: "flex",
