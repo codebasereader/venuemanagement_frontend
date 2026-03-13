@@ -94,6 +94,7 @@ const inchargeNavItems = [
 const adminNavItems = [
   { path: "/venues", label: "View Venues", icon: VenuesIcon, end: false },
   { path: "/users", label: "View Users", icon: UsersIcon, end: false },
+  { path: "/calendar", label: "Calendar", icon: CalendarIcon, end: false },
 ];
 
 // ── Avatar ─────────────────────────────────────────────────────────────────
@@ -198,7 +199,7 @@ export default function DashboardLayout() {
       {/* ══ DESKTOP SIDEBAR ══ */}
       {!isMobile && (
         <aside
-          className="h-screen bg-[#faf9f7] border-r border-[#ece9e4] flex flex-col shrink-0 overflow-hidden transition-[width] duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+          className="h-screen bg-[#faf9f7] border-r border-[#ece9e4] flex flex-col shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out"
           style={{ width: collapsed ? "64px" : "220px" }}
         >
           {/* Logo + toggle */}
@@ -301,7 +302,7 @@ export default function DashboardLayout() {
       {/* ══ MOBILE BOTTOM NAV ══ */}
       {isMobile && (
         <nav
-          className="fixed bottom-0 left-0 right-0 h-16 bg-[rgba(250,249,247,0.95)] backdrop-blur-[12px] border-t border-[#ece9e4] flex items-center z-[100]"
+          className="fixed bottom-0 left-0 right-0 h-16 bg-[rgba(250,249,247,0.95)] backdrop-blur-md border-t border-[#ece9e4] flex items-center z-40"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           {navItems.map(({ path, label, icon, end }) => (

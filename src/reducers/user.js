@@ -83,9 +83,10 @@ export const userSlice = createSlice({
         state.loading = false;
         state.error = null;
       })
-      .addCase(fetchCurrentUser.rejected, (state, action) => {
+      .addCase(fetchCurrentUser.rejected, (state) => {
         state.loading = false;
-        state.error = action.payload;
+        // Auto-logout when /me fails (expired or invalid token)
+        state.value = initialValue;
       });
   },
 });

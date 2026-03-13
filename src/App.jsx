@@ -3,16 +3,17 @@ import { useSelector } from "react-redux";
 import DashboardLayout from "./dashboardlayout/DashboardLayout";
 import Home from "./pages/Home";
 import Leads from "./pages/Leads";
+import LeadDetailsPage from "./pages/leads/LeadDetailsPage.jsx";
 import Calendar from "./pages/Calendar";
 import Profile from "./pages/Profile";
 import VenueProfile from "./profileitems/venueprofile/VenueProfile";
 import ViewSpaces from "./profileitems/spaces/ViewSpaces";
 import PricingHome from "./profileitems/pricing/PricingHome";
 import GalleryHome from "./profileitems/gallery/GalleryHome";
-import LoginPage from "./pages/login/LoginPage";
-import { ROLES } from "../config";
 import ViewUsers from "./pages/admin/users/ViewUsers";
 import ViewVenues from "./pages/admin/venues/ViewVenues";
+import LoginPage from "./pages/login/LoginPage";
+import { ROLES } from "../config";
 
 function LoginGuard() {
   const { is_logged_in, role } = useSelector((state) => state.user.value);
@@ -43,6 +44,7 @@ export default function App() {
         <Route element={<DashboardLayout />}>
           <Route index element={<DashboardIndex />} />
           <Route path="leads" element={<Leads />} />
+          <Route path="leads/:leadId" element={<LeadDetailsPage />} />
           <Route path="calendar" element={<Calendar />} />
           <Route path="profile" element={<Outlet />}>
             <Route index element={<Profile />} />

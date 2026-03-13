@@ -6,8 +6,10 @@ import { combineReducers } from "redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
 import userReducer from "./reducers/user";
+import { logout } from "./reducers/user";
 import { BrowserRouter } from "react-router-dom";
 import AuthInitializer from "./components/AuthInitializer";
+import axios from "axios";
 
 const STORAGE_KEY = "venueapp_user";
 
@@ -40,6 +42,22 @@ const store = configureStore({
 });
 
 store.subscribe(() => saveState(store.getState()));
+
+// Auto-logout on 401 (expired or invalid token) from any API call
+axios.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      const url = err.config?.url ?? "";
+      const isAuthEndpoint = /auth\/(login|register)$/.test(url);
+      if (!isAuthEndpoint) {
+        store.dispatch(logout());
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(err);
+  },
+);
 
 createRoot(document.getElementById("root")).render(
   <Provider store={store}>

@@ -499,6 +499,259 @@ Only keys under the `uploads/` prefix are allowed (prevents deleting arbitrary b
 
 ---
 
+## Quotes
+
+Pricing quotes for leads. Each quote belongs to a lead and a venue.
+
+**Booking types:** `venue_buyout`, `space_buyout`  
+**Statuses:** `draft` → `shared` → `accepted` / `rejected`  
+**Flags:** `draft` (true = save as draft), `confirmed` (true = confirmed). Server enforces invariant: `draft=true` forces `confirmed=false` and vice versa.
+
+Two sets of routes are available:
+- **Nested under lead:** `/api/venues/{venueId}/leads/{leadId}/quotes` — create, list, get, patch, delete quotes for a specific lead.
+- **Venue-level:** `/api/venues/{venueId}/quotes` — list, get, patch, delete all quotes for a venue.
+
+---
+
+### Create quote  
+`POST /api/venues/{venueId}/leads/{leadId}/quotes`  
+Auth: Admin or Incharge. `createdBy` auto-set from JWT.
+
+**Request body (JSON)**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| bookingType | string | ✓ | `venue_buyout` or `space_buyout` |
+| spaceId | string | | Required when bookingType is `space_buyout` |
+| eventWindow.startAt | datetime | ✓ | Event start (ISO 8601) |
+| eventWindow.endAt | datetime | ✓ | Event end (ISO 8601) |
+| eventWindow.durationHours | number | ✓ | Duration in hours (12/24/36/48) |
+| pricing.basePrice | number | ✓ | Base venue/space price |
+| pricing.inclusions | array | | `{ name, quantity, maxQuantity }` |
+| pricing.addons | array | | `{ name, quantity, unitPrice }` |
+| pricing.gstRate | number | | Default 0.18 |
+| pricing.discount | number | | Discount amount |
+| pricing.totals | object | | `{ venueBase, venueGst, addonTotal, addonGst, subtotal, discount, total }` |
+| draft | boolean | | Default true |
+| confirmed | boolean | | Default false |
+
+**Example (venue buyout draft)**
+```json
+{
+  "bookingType": "venue_buyout",
+  "eventWindow": {
+    "startAt": "2026-03-11T07:31:00.000Z",
+    "endAt": "2026-03-12T07:31:00.000Z",
+    "durationHours": 24
+  },
+  "pricing": {
+    "basePrice": 1000000,
+    "inclusions": [
+      { "name": "Generator", "quantity": 1, "maxQuantity": 1 },
+      { "name": "House keeping", "quantity": 15, "maxQuantity": 15 }
+    ],
+    "addons": [
+      { "name": "Chairs", "quantity": 10, "unitPrice": 100 },
+      { "name": "Suite Rooms", "quantity": 2, "unitPrice": 4000 }
+    ],
+    "gstRate": 0.18,
+    "discount": 0,
+    "totals": {
+      "venueBase": 1000000,
+      "venueGst": 180000,
+      "addonTotal": 9000,
+      "addonGst": 1620,
+      "subtotal": 1190620,
+      "discount": 0,
+      "total": 1190620
+    }
+  },
+  "draft": true,
+  "confirmed": false
+}
+```
+
+**Responses:** 201, 400, 401, 403, 404.
+
+---
+
+### List quotes (for a lead)  
+`GET /api/venues/{venueId}/leads/{leadId}/quotes`  
+Auth: Admin or Incharge.
+
+**Query params:** `?status=draft`, `?draft=true`, `?confirmed=true` (optional filters).
+
+Response includes populated `lead`, `venue`, `space`, and `createdByUser`.
+
+**Responses:** 200, 401, 403.
+
+---
+
+### List quotes (venue-level)  
+`GET /api/venues/{venueId}/quotes`  
+Auth: Admin or Incharge. All quotes across all leads for the venue.
+
+Same query filters as lead-level.
+
+**Responses:** 200, 401, 403.
+
+---
+
+### Get quote by ID  
+`GET /api/venues/{venueId}/leads/{leadId}/quotes/{quoteId}`  
+`GET /api/venues/{venueId}/quotes/{quoteId}`  
+Auth: Admin or Incharge.
+
+**Responses:** 200, 401, 403, 404.
+
+---
+
+### Update quote (confirm / edit)  
+`PATCH /api/venues/{venueId}/leads/{leadId}/quotes/{quoteId}`  
+`PATCH /api/venues/{venueId}/quotes/{quoteId}`  
+Auth: Admin or Incharge.
+
+**Minimal confirm**
+```json
+{ "confirmed": true, "draft": false }
+```
+
+**Confirm with updated pricing**
+```json
+{
+  "pricing": { "basePrice": 1000000, "discount": 5000, "totals": { "total": 1176180 } },
+  "confirmed": true,
+  "draft": false
+}
+```
+
+**Responses:** 200, 400, 401, 403, 404.
+
+---
+
+### Delete quote  
+`DELETE /api/venues/{venueId}/leads/{leadId}/quotes/{quoteId}`  
+`DELETE /api/venues/{venueId}/quotes/{quoteId}`  
+Auth: Admin or Incharge.
+
+**Responses:** 200, 401, 403, 404.
+
+---
+
+## Leads
+
+Event enquiries / leads per venue. Created by Incharge or Admin. Each lead tracks event details, contact info, and a pipeline status.
+
+**Event types:** `wedding`, `reception`, `engagement`, `birthday`, `corporate`, `conference`, `exhibition`, `other`  
+**Lead statuses:** `new` → `contacted` → `followup` → `visited` → `negotiation` → `won` / `lost`
+
+---
+
+### Create lead  
+`POST /api/venues/{venueId}/leads`  
+Auth: Admin or Incharge. `createdBy` is auto-set to the authenticated user.
+
+**Request body (JSON)**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| eventType | string | ✓ | One of the event types above |
+| eventTypeOther | string | | Custom name when eventType is `other` |
+| specialDay.startAt | datetime | ✓ | Event start (ISO 8601) |
+| specialDay.endAt | datetime | ✓ | Event end (ISO 8601) |
+| specialDay.durationHours | number | ✓ | Duration in hours |
+| expectedGuests | number | | Expected guest count |
+| contact.name | string | ✓ | Contact person name |
+| contact.phone | string | ✓ | Contact phone |
+| contact.altPhone | string | | Alternate phone |
+| notes | string | | Free-text notes |
+
+**Example (wedding)**
+```json
+{
+  "eventType": "wedding",
+  "specialDay": {
+    "startAt": "2026-03-20T10:30:00.000Z",
+    "endAt": "2026-03-20T22:30:00.000Z",
+    "durationHours": 12
+  },
+  "expectedGuests": 250,
+  "contact": {
+    "name": "Rahul Sharma",
+    "phone": "+919876543210"
+  }
+}
+```
+
+**Example (custom event)**
+```json
+{
+  "eventType": "other",
+  "eventTypeOther": "Baby shower",
+  "specialDay": {
+    "startAt": "2026-03-20T10:30:00.000Z",
+    "endAt": "2026-03-20T22:30:00.000Z",
+    "durationHours": 12
+  },
+  "expectedGuests": 250,
+  "contact": {
+    "name": "Rahul Sharma",
+    "phone": "+919876543210",
+    "altPhone": "+919812345678"
+  }
+}
+```
+
+**Responses:** 201, 400, 401, 403.
+
+---
+
+### List leads  
+`GET /api/venues/{venueId}/leads`  
+Auth: Admin or Incharge.
+
+**Query params:** `?status=new` (optional filter by status).
+
+Response includes populated `createdByUser` and `venue` objects via aggregation.
+
+**Responses:** 200 (array of leads), 401, 403.
+
+---
+
+### Get lead by ID  
+`GET /api/venues/{venueId}/leads/{leadId}`  
+Auth: Admin or Incharge. Includes populated `createdByUser` and `venue`.
+
+**Responses:** 200, 401, 403, 404.
+
+---
+
+### Update lead  
+`PATCH /api/venues/{venueId}/leads/{leadId}`  
+Auth: Admin or Incharge.
+
+**Request body (JSON)** — any combination of: eventType, eventTypeOther, specialDay, expectedGuests, contact, status, notes, metadata.
+
+**Example (update status)**
+```json
+{
+  "status": "contacted",
+  "notes": "Called the client, interested in 24hr package"
+}
+```
+
+**Responses:** 200, 400, 401, 403, 404.
+
+---
+
+### Delete lead  
+`DELETE /api/venues/{venueId}/leads/{leadId}`  
+Auth: Admin or Incharge.
+
+**Responses:** 200, 401, 403, 404.
+
+---
+
 ## Gallery (Albums + Photos)
 
 One venue can have multiple albums. Each album contains multiple photos (stored as sub-documents).

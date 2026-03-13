@@ -1,5 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import AddLeads from "../leaditems/AddLeads.jsx";
+import { createLead, listLeads } from "../api/leads.js";
 
 const PlusIcon = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -31,15 +34,6 @@ const EyeIcon = ({ size = 16 }) => (
   </svg>
 );
 
-// Sample leads data – replace with API/localStorage when ready
-const SAMPLE_LEADS = [
-  { id: "1", clientName: "Sarah Mitchell", phone: "+1 (555) 234-5678", createdAt: "2025-03-05T10:30:00" },
-  { id: "2", clientName: "James Chen", phone: "+1 (555) 876-5432", createdAt: "2025-03-04T14:20:00" },
-  { id: "3", clientName: "Emma Wilson", phone: "+1 (555) 111-2233", createdAt: "2025-03-06T09:15:00" },
-  { id: "4", clientName: "Michael Brown", phone: "+1 (555) 444-5566", createdAt: "2025-03-03T16:45:00" },
-  { id: "5", clientName: "Olivia Davis", phone: "+1 (555) 777-8899", createdAt: "2025-03-07T08:00:00" },
-];
-
 function formatDate(isoString) {
   const d = new Date(isoString);
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
@@ -51,6 +45,9 @@ function formatDateForInput(isoString) {
 }
 
 function LeadCard({ lead, onViewDetails }) {
+  const name = lead?.contact?.name || lead?.clientName || "—";
+  const phone = lead?.contact?.phone || lead?.phone || "—";
+  const createdAt = lead?.createdAt || lead?.created_at;
   return (
     <div
       style={{
@@ -73,13 +70,13 @@ function LeadCard({ lead, onViewDetails }) {
             color: "#1a1917",
           }}
         >
-          {lead.clientName}
+          {name}
         </p>
         <p style={{ margin: "0 0 4px", fontSize: "14px", color: "#6b6966" }}>
-          {lead.phone}
+          {phone}
         </p>
         <p style={{ margin: 0, fontSize: "13px", color: "#9a9896" }}>
-          Created {formatDate(lead.createdAt)}
+          {createdAt ? `Created ${formatDate(createdAt)}` : "—"}
         </p>
       </div>
       <button
@@ -119,30 +116,67 @@ function LeadCard({ lead, onViewDetails }) {
 
 const Leads = () => {
   const navigate = useNavigate();
+  const { access_token, venueId } = useSelector((state) => state.user.value);
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [leads] = useState(SAMPLE_LEADS);
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      if (!venueId || !access_token) return;
+      setError("");
+      setLoading(true);
+      try {
+        const data = await listLeads(venueId, access_token);
+        if (!cancelled) setLeads(Array.isArray(data) ? data : data?.items || []);
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err.response?.data?.error?.message ||
+              "Failed to load leads. Please try again.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [venueId, access_token]);
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
+      const name = (lead?.contact?.name || lead?.clientName || "").toLowerCase();
+      const phoneDigits = String(lead?.contact?.phone || lead?.phone || "").replace(/\D/g, "");
       const matchesSearch =
         !search.trim() ||
-        lead.clientName.toLowerCase().includes(search.trim().toLowerCase()) ||
-        lead.phone.replace(/\D/g, "").includes(search.trim().replace(/\D/g, ""));
+        name.includes(search.trim().toLowerCase()) ||
+        phoneDigits.includes(search.trim().replace(/\D/g, ""));
+
+      const createdAt = lead?.createdAt || lead?.created_at;
       const matchesDate =
         !dateFilter ||
-        formatDateForInput(lead.createdAt) === dateFilter;
+        (createdAt ? formatDateForInput(createdAt) : "") === dateFilter;
       return matchesSearch && matchesDate;
     });
   }, [leads, search, dateFilter]);
 
   const handleAdd = () => {
-    // TODO: open add lead modal or navigate to add lead page
+    setIsAddOpen(true);
   };
 
   const handleViewDetails = (lead) => {
-    // TODO: navigate to lead detail or open detail modal
-    navigate(`/leads/${lead.id}`);
+    const id = lead?._id || lead?.id;
+    if (id) navigate(`/leads/${id}`);
   };
 
   return (
@@ -287,10 +321,92 @@ const Leads = () => {
             gap: "20px",
           }}
         >
-          {filteredLeads.map((lead) => (
-            <LeadCard key={lead.id} lead={lead} onViewDetails={handleViewDetails} />
-          ))}
+          {loading &&
+            Array.from({ length: 6 }, (_, i) => (
+              <div
+                key={i}
+                style={{
+                  background: "white",
+                  borderRadius: "12px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px #f1f0ee",
+                  padding: "18px 20px",
+                  minHeight: 120,
+                }}
+              >
+                <div
+                  style={{
+                    height: 14,
+                    width: "60%",
+                    background: "#f0ede8",
+                    borderRadius: 8,
+                    marginBottom: 10,
+                  }}
+                />
+                <div
+                  style={{
+                    height: 12,
+                    width: "45%",
+                    background: "#f0ede8",
+                    borderRadius: 8,
+                    marginBottom: 10,
+                  }}
+                />
+                <div
+                  style={{
+                    height: 10,
+                    width: "40%",
+                    background: "#f0ede8",
+                    borderRadius: 8,
+                  }}
+                />
+              </div>
+            ))}
+
+          {!loading &&
+            filteredLeads.map((lead) => (
+              <LeadCard
+                key={lead?._id || lead?.id}
+                lead={lead}
+                onViewDetails={handleViewDetails}
+              />
+            ))}
         </div>
+
+        {!!error && (
+          <div
+            style={{
+              marginTop: 18,
+              padding: "14px 16px",
+              borderRadius: 12,
+              background: "#fde8e6",
+              border: "1px solid #f6c8c2",
+              color: "#a33b2d",
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {!venueId && (
+          <div
+            style={{
+              marginTop: 18,
+              padding: "14px 16px",
+              borderRadius: 12,
+              background: "#faf9f7",
+              border: "1px dashed #e8e6e2",
+              color: "#6b6966",
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            No venue assigned. Leads are per-venue, so please assign a venue to this user.
+          </div>
+        )}
 
         {filteredLeads.length === 0 && (
           <div
@@ -311,6 +427,31 @@ const Leads = () => {
           </div>
         )}
       </div>
+
+      <AddLeads
+        isOpen={isAddOpen}
+        submitting={submitting}
+        onClose={() => setIsAddOpen(false)}
+        onSubmit={async (payload) => {
+          try {
+            setSubmitting(true);
+            if (!venueId) throw new Error("No venue assigned to user.");
+            const created = await createLead(venueId, payload, access_token);
+            setLeads((prev) => [created, ...prev]);
+            setIsAddOpen(false);
+            setSearch("");
+            setDateFilter("");
+          } catch (err) {
+            setError(
+              err.response?.data?.error?.message ||
+                err.message ||
+                "Failed to create lead. Please try again.",
+            );
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+      />
     </>
   );
 };
