@@ -47,7 +47,11 @@ export default function ConfirmedQuoteCard({ confirmedQuote }) {
   const totals = confirmedQuote.pricing?.totals || {};
   const total = totals.total ?? 0;
   const bookingLabel =
-    confirmedQuote.bookingType === "space_buyout" ? "Space buyout" : "Full venue buyout";
+    confirmedQuote.bookingType === "space_buyout"
+      ? confirmedQuote.space?.name
+        ? `Space buyout • ${confirmedQuote.space.name}`
+        : "Space buyout"
+      : "Full venue buyout";
 
   return (
     <div style={cardStyle}>

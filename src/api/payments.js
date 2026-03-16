@@ -26,11 +26,32 @@ export async function listPayments(venueId, leadId, token) {
 /**
  * Record a received payment.
  * POST /api/venues/{venueId}/leads/{leadId}/payments
- * Body: { amount, method: 'cash'|'account', notes?, reminderId? }
+ * Body: {
+ *   amount,
+ *   method: 'cash'|'account',
+ *   receivedAt?,
+ *   receivedByName?,
+ *   givenByName?,
+ *   notes?,
+ *   reminderId?
+ * }
  */
 export async function createPayment(venueId, leadId, payload, token) {
   const res = await axios.post(
     `${base(venueId, leadId)}/payments`,
+    payload,
+    { headers: { "Content-Type": "application/json", ...authHeaders(token) } },
+  );
+  return unwrapData(res);
+}
+
+/**
+ * Update a payment (edit flow).
+ * PATCH /api/venues/{venueId}/leads/{leadId}/payments/{paymentId}
+ */
+export async function updatePayment(venueId, leadId, paymentId, payload, token) {
+  const res = await axios.patch(
+    `${base(venueId, leadId)}/payments/${paymentId}`,
     payload,
     { headers: { "Content-Type": "application/json", ...authHeaders(token) } },
   );

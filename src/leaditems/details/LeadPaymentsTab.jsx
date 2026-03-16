@@ -7,13 +7,19 @@ import {
   updateReminder,
   deleteReminder,
 } from "../../api/paymentReminders.js";
-import { listPayments, createPayment, deletePayment } from "../../api/payments.js";
+import {
+  listPayments,
+  createPayment,
+  updatePayment,
+  deletePayment,
+} from "../../api/payments.js";
 import ConfirmedQuoteCard from "../payments/ConfirmedQuoteCard.jsx";
 import PaymentProgressCard from "../payments/PaymentProgressCard.jsx";
 import PaymentHistoryCard from "../payments/PaymentHistoryCard.jsx";
 import PaymentRemindersCard from "../payments/PaymentRemindersCard.jsx";
 import AddReminderModal from "../payments/AddReminderModal.jsx";
 import ReceivedPaymentModal from "../payments/ReceivedPaymentModal.jsx";
+import AddPaymentModal from "../payments/AddPaymentModal.jsx";
 
 function ConfirmDeleteModal({ title, message, loading, onCancel, onConfirm }) {
   return (
@@ -122,9 +128,12 @@ export default function LeadPaymentsTab({ lead }) {
   const [addReminderOpen, setAddReminderOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
   const [receivedReminder, setReceivedReminder] = useState(null);
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [reminderSubmitting, setReminderSubmitting] = useState(false);
   const [receivedSubmitting, setReceivedSubmitting] = useState(false);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [deleteReminder, setDeleteReminder] = useState(null);
   const [deletePayment, setDeletePayment] = useState(null);
 
@@ -239,6 +248,16 @@ export default function LeadPaymentsTab({ lead }) {
     setReceivedReminder(reminder);
   };
 
+  const handleAddPayment = () => {
+    setEditingPayment(null);
+    setAddPaymentOpen(true);
+  };
+
+  const handleEditPayment = (payment) => {
+    setEditingPayment(payment);
+    setAddPaymentOpen(true);
+  };
+
   const handleReceivedConfirm = useCallback(
     async (payload) => {
       if (!venueId || !leadId || !token) return;
@@ -257,6 +276,33 @@ export default function LeadPaymentsTab({ lead }) {
       }
     },
     [venueId, leadId, token, fetchPayments, fetchReminders],
+  );
+
+  const handlePaymentSubmit = useCallback(
+    async (payload) => {
+      if (!venueId || !leadId || !token) return;
+      setPaymentSubmitting(true);
+      setError("");
+      try {
+        if (editingPayment?._id) {
+          await updatePayment(venueId, leadId, editingPayment._id, payload, token);
+        } else {
+          await createPayment(venueId, leadId, payload, token);
+        }
+        setAddPaymentOpen(false);
+        setEditingPayment(null);
+        await fetchPayments();
+      } catch (err) {
+        setError(
+          err.response?.data?.error?.message ||
+            err.message ||
+            "Failed to save payment.",
+        );
+      } finally {
+        setPaymentSubmitting(false);
+      }
+    },
+    [venueId, leadId, token, editingPayment, fetchPayments],
   );
 
   const handleDeletePayment = useCallback(
@@ -317,14 +363,16 @@ export default function LeadPaymentsTab({ lead }) {
           <PaymentProgressCard totalAmount={totalAmount} collectedAmount={collectedAmount} />
           <PaymentHistoryCard
             payments={payments}
-        onDelete={(p) => setDeletePayment(p)}
+            onDelete={(p) => setDeletePayment(p)}
+            onEdit={handleEditPayment}
+            onAdd={handleAddPayment}
             actionLoadingId={actionLoadingId}
           />
           <PaymentRemindersCard
             reminders={reminders}
             onAdd={handleAddReminder}
             onEdit={handleEditReminder}
-        onDelete={(r) => setDeleteReminder(r)}
+            onDelete={(r) => setDeleteReminder(r)}
             onReceived={handleReceivedClick}
             loading={loading}
             actionLoadingId={actionLoadingId}
@@ -349,6 +397,17 @@ export default function LeadPaymentsTab({ lead }) {
         onConfirm={handleReceivedConfirm}
         reminder={receivedReminder}
         submitting={receivedSubmitting}
+      />
+
+      <AddPaymentModal
+        isOpen={addPaymentOpen}
+        onClose={() => {
+          setAddPaymentOpen(false);
+          setEditingPayment(null);
+        }}
+        onSubmit={handlePaymentSubmit}
+        initialPayment={editingPayment}
+        submitting={paymentSubmitting}
       />
 
       {/* Delete reminder modal */}

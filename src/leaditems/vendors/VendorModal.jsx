@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { formatINR } from "../quotes/quoteMath.js";
+import React, { useEffect, useState } from "react";
 
 const overlayStyle = {
   position: "fixed",
@@ -8,7 +7,7 @@ const overlayStyle = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  zIndex: 1100,
+  zIndex: 1200,
   padding: 16,
 };
 
@@ -32,7 +31,7 @@ const labelStyle = {
 
 const inputStyle = {
   width: "100%",
-  padding: "12px 14px",
+  padding: "10px 12px",
   borderRadius: 12,
   border: "1px solid #e8e6e2",
   fontFamily: "'DM Sans', sans-serif",
@@ -40,11 +39,6 @@ const inputStyle = {
   color: "#1a1917",
   background: "white",
   boxSizing: "border-box",
-};
-
-const selectStyle = {
-  ...inputStyle,
-  cursor: "pointer",
 };
 
 const btnBase = {
@@ -57,52 +51,43 @@ const btnBase = {
   cursor: "pointer",
 };
 
-export default function ReceivedPaymentModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  reminder = null,
-  submitting = false,
-}) {
+export default function VendorModal({ isOpen, onClose, onSubmit, submitting }) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
-  const [method, setMethod] = useState("account");
-  const [receivedByName, setReceivedByName] = useState("");
-  const [givenByName, setGivenByName] = useState("");
 
-  const amount = reminder?.expectedAmount ?? 0;
-
-  const handleConfirm = (e) => {
-    e.preventDefault();
-    onConfirm({
-      amount: Number(amount) || 0,
-      method,
-      notes: (notes || "").trim(),
-      reminderId: reminder?._id,
-      receivedByName: receivedByName.trim(),
-      givenByName: givenByName.trim(),
-    });
+  useEffect(() => {
+    if (!isOpen) return;
+    setName("");
+    setCategory("");
+    setPhone("");
+    setEmail("");
     setNotes("");
-    setMethod("account");
-    setReceivedByName("");
-    setGivenByName("");
-  };
+  }, [isOpen]);
 
   const handleClose = () => {
     if (!submitting) {
-      setNotes("");
-      setMethod("account");
-      setReceivedByName("");
-      setGivenByName("");
       onClose?.();
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSubmit({
+      name: name.trim(),
+      category: category.trim() || undefined,
+      phone: phone.trim() || undefined,
+      email: email.trim() || undefined,
+      notes: notes.trim() || undefined,
+    });
+  };
+
   if (!isOpen) return null;
 
-  const canSubmit =
-    Boolean(amount) &&
-    Boolean(receivedByName.trim()) &&
-    Boolean(givenByName.trim());
+  const canSubmit = Boolean(name.trim());
 
   return (
     <div
@@ -116,61 +101,69 @@ export default function ReceivedPaymentModal({
             fontWeight: 900,
             fontSize: 18,
             color: "#1a1917",
-            marginBottom: 8,
+            marginBottom: 12,
           }}
         >
-          Confirm payment received
+          Add vendor
         </div>
         <p
           style={{
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: 14,
+            fontSize: 13,
             color: "#6b6966",
-            lineHeight: 1.5,
             margin: "0 0 16px 0",
           }}
         >
-          Are you sure you received {formatINR(amount)}? This will update the progress and mark the reminder as received.
+          Only name is required. Other details are optional and can help you
+          remember who this vendor is.
         </p>
-        <form onSubmit={handleConfirm}>
-          <label style={labelStyle}>Received in</label>
-          <select
-            value={method}
-            onChange={(e) => setMethod(e.target.value)}
-            style={{ ...selectStyle, marginBottom: 14 }}
-          >
-            <option value="account">Bank / Account transfer</option>
-            <option value="cash">Cash</option>
-          </select>
-
-          <label style={labelStyle}>Received by (staff name)</label>
+        <form onSubmit={handleSubmit}>
+          <label style={labelStyle}>Name *</label>
           <input
             type="text"
-            value={receivedByName}
-            onChange={(e) => setReceivedByName(e.target.value)}
-            placeholder="e.g. Kumar"
-            style={{ ...inputStyle, marginBottom: 14 }}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Photographer Raj"
+            style={{ ...inputStyle, marginBottom: 10 }}
             required
           />
 
-          <label style={labelStyle}>Given by (client name)</label>
+          <label style={labelStyle}>Category</label>
           <input
             type="text"
-            value={givenByName}
-            onChange={(e) => setGivenByName(e.target.value)}
-            placeholder="e.g. Bride family"
-            style={{ ...inputStyle, marginBottom: 14 }}
-            required
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="photography / decor / catering"
+            style={{ ...inputStyle, marginBottom: 10 }}
           />
 
-          <label style={labelStyle}>Notes (optional)</label>
+          <label style={labelStyle}>Phone</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+919876543210"
+            style={{ ...inputStyle, marginBottom: 10 }}
+          />
+
+          <label style={labelStyle}>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="raj@example.com"
+            style={{ ...inputStyle, marginBottom: 10 }}
+          />
+
+          <label style={labelStyle}>Notes</label>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. NEFT ref 123456"
-            style={{ ...inputStyle, marginBottom: 20 }}
+            placeholder="Specializes in candid weddings"
+            style={{ ...inputStyle, marginBottom: 18 }}
           />
+
           <div
             style={{
               display: "flex",
@@ -192,7 +185,7 @@ export default function ReceivedPaymentModal({
               disabled={submitting || !canSubmit}
               style={{ ...btnBase, background: "#c9a84c", color: "#1a1917" }}
             >
-              {submitting ? "Saving…" : "Confirm"}
+              {submitting ? "Saving…" : "Add vendor"}
             </button>
           </div>
         </form>
@@ -200,3 +193,4 @@ export default function ReceivedPaymentModal({
     </div>
   );
 }
+

@@ -27,6 +27,14 @@ function EmptyCard({ title, description }) {
   );
 }
 
+function getBookingLabelWithSpace(quote, baseLabelForSpace, baseLabelForVenue) {
+  if (quote?.bookingType === "space_buyout") {
+    const spaceName = quote?.space?.name;
+    return spaceName ? `${baseLabelForSpace} • ${spaceName}` : baseLabelForSpace;
+  }
+  return baseLabelForVenue;
+}
+
 function shareQuoteWhatsApp(lead, quote) {
   const name = lead?.contact?.name || "Customer";
   const ew = quote?.eventWindow || {};
@@ -35,7 +43,11 @@ function shareQuoteWhatsApp(lead, quote) {
   const duration = ew.durationHours || "";
   const pricing = quote?.pricing || {};
   const totals = pricing.totals || {};
-  const bookingType = quote?.bookingType === "space_buyout" ? "Space buyout" : "Full venue buyout";
+  const bookingType = getBookingLabelWithSpace(
+    quote,
+    "Space buyout",
+    "Full venue buyout",
+  );
   const addonsArr = Array.isArray(pricing.addons) ? pricing.addons : [];
   const addonsStr =
     addonsArr.length > 0
@@ -288,8 +300,11 @@ function ViewQuoteModal({ isOpen, onClose, quote, lead }) {
   const totals = pricing.totals || {};
   const inclusions = Array.isArray(pricing.inclusions) ? pricing.inclusions : [];
   const addons = Array.isArray(pricing.addons) ? pricing.addons : [];
-  const bookingLabel =
-    quote.bookingType === "space_buyout" ? "Space buyout" : "Full venue buyout";
+  const bookingLabel = getBookingLabelWithSpace(
+    quote,
+    "Space buyout",
+    "Full venue buyout",
+  );
 
   const formatDateTime = (iso) => {
     if (!iso) return "—";
@@ -798,8 +813,11 @@ export default function LeadQuotesTab({ lead }) {
           const totalAmount = totals.total != null ? totals.total : null;
           const isDraft = q?.draft ?? !q?.confirmed;
           const isConfirmed = q?.confirmed === true;
-          const bookingLabel =
-            q?.bookingType === "space_buyout" ? "Space buyout" : "Venue buyout";
+          const bookingLabel = getBookingLabelWithSpace(
+            q,
+            "Space buyout",
+            "Venue buyout",
+          );
           const busy = actionLoading === q._id;
 
           return (

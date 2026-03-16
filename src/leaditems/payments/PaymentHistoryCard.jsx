@@ -1,19 +1,12 @@
 import React from "react";
 import { formatINR } from "../quotes/quoteMath.js";
+import PaymentSectionHeader from "./PaymentSectionHeader.jsx";
 
 const cardStyle = {
   background: "white",
   borderRadius: 16,
   border: "1px solid #ece9e4",
   padding: 16,
-};
-
-const titleStyle = {
-  fontSize: 13,
-  fontWeight: 900,
-  color: "#1a1917",
-  fontFamily: "'DM Sans', sans-serif",
-  marginBottom: 10,
 };
 
 const rowStyle = {
@@ -40,6 +33,21 @@ const iconBtnStyle = {
   color: "#6b6966",
 };
 
+const addBtnStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "8px 12px",
+  borderRadius: 10,
+  border: "none",
+  background: "#c9a84c",
+  color: "#1a1917",
+  fontFamily: "'DM Sans', sans-serif",
+  fontSize: 12,
+  fontWeight: 800,
+  cursor: "pointer",
+};
+
 function formatDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -53,6 +61,38 @@ function methodLabel(method) {
   return (method || "").toUpperCase() || "—";
 }
 
+function PlusIcon({ size = 14 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+function PencilIcon({ size = 14 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
 function TrashIcon({ size = 14 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -64,14 +104,40 @@ function TrashIcon({ size = 14 }) {
   );
 }
 
-export default function PaymentHistoryCard({ payments = [], onDelete, actionLoadingId = null }) {
+export default function PaymentHistoryCard({
+  payments = [],
+  onDelete,
+  onEdit,
+  onAdd,
+  actionLoadingId = null,
+}) {
   return (
     <div style={cardStyle}>
-      <div style={titleStyle}>Payment history</div>
+      <PaymentSectionHeader
+        title="Payment history"
+        action={
+          onAdd ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              style={addBtnStyle}
+            >
+              <PlusIcon /> Add payment
+            </button>
+          ) : null
+        }
+      />
       <div style={{ borderTop: "1px solid #f1f0ee" }} />
 
       {payments.length === 0 && (
-        <p style={{ margin: "12px 0 0", fontSize: 13, color: "#6b6966", fontFamily: "'DM Sans', sans-serif" }}>
+        <p
+          style={{
+            margin: "12px 0 0",
+            fontSize: 13,
+            color: "#6b6966",
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
           No payments recorded yet. Mark a reminder as received or add a payment to see them here.
         </p>
       )}
@@ -82,23 +148,58 @@ export default function PaymentHistoryCard({ payments = [], onDelete, actionLoad
         return (
           <div key={p._id} style={rowStyle}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 900, color: "#1a1917", fontFamily: "'DM Sans', sans-serif" }}>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 900,
+                  color: "#1a1917",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
                 {formatINR(p.amount ?? 0)}
               </div>
-              <div style={{ fontSize: 12, color: "#6b6966", fontFamily: "'DM Sans', sans-serif", marginTop: 2 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#6b6966",
+                  fontFamily: "'DM Sans', sans-serif",
+                  marginTop: 2,
+                }}
+              >
                 {methodLabel(p.method)} • {formatDate(date)}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => onDelete(p)}
-              disabled={busy}
-              style={iconBtnStyle}
-              title="Delete"
-              aria-label="Delete"
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexWrap: "wrap",
+              }}
             >
-              <TrashIcon />
-            </button>
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(p)}
+                  disabled={busy}
+                  style={iconBtnStyle}
+                  title="Edit"
+                  aria-label="Edit"
+                >
+                  <PencilIcon />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => onDelete(p)}
+                disabled={busy}
+                style={iconBtnStyle}
+                title="Delete"
+                aria-label="Delete"
+              >
+                <TrashIcon />
+              </button>
+            </div>
           </div>
         );
       })}

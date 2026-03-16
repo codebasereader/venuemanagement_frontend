@@ -3,9 +3,11 @@
 // Imports: BookingCalendar + calendarUtils (3 files total)
 // ─────────────────────────────────────────────────────────────
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import BookingCalendar from "../components/BookingCalendar";
-import { useBookings, getAvailableYears, getGreeting, getDaysInYear } from "../utils/calendarUtils";
+import { getAvailableYears, getGreeting } from "../utils/calendarUtils";
+import { listConfirmedLeadStats } from "../api/leads";
 
 // Computed once on load — stable across renders
 const GREETING     = getGreeting();
@@ -57,13 +59,39 @@ function StatCard({ label, value, sub, color }) {
 // ── Home Page ─────────────────────────────────────────────────
 
 export default function Home() {
+  const { access_token: token, venueId } = useSelector(
+    (state) => state.user.value,
+  );
   const [year, setYear] = useState(DEFAULT_YEAR);
-  const { bookedDates, toggleDate, countForYear } = useBookings();
+  const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
-  const booked    = countForYear(year);
-  const totalDays = getDaysInYear(year);
-  const free      = totalDays - booked;
-  const occupancy = totalDays > 0 ? Math.round((booked / totalDays) * 100) : 0;
+  useEffect(() => {
+    if (!token || !venueId) return;
+
+    let cancelled = false;
+    (async () => {
+      setLoadingStats(true);
+      try {
+        const data = await listConfirmedLeadStats(venueId, token, {
+          year,
+        });
+        if (!cancelled) {
+          setStats(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setStats(null);
+        }
+      } finally {
+        if (!cancelled) setLoadingStats(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, venueId, year]);
 
   return (
     <div style={{
@@ -112,19 +140,50 @@ export default function Home() {
         </button>
       </header>
 
-      {/* ── Stats strip ── */}
+      {/* ── Stats strip (API-driven) ── */}
       <div role="region" aria-label="Booking statistics" style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-        <StatCard label="Booked Days" value={booked}          color="#e8875a" sub={`of ${totalDays} days`} />
-        <StatCard label="Free Days"   value={free}            color="#5ab99c" sub={`remaining in ${year}`} />
-        <StatCard label="Occupancy"   value={`${occupancy}%`} color="#7c6fcd" />
+        <StatCard
+          label="Total bookings"
+          value={stats?.totalBookings ?? (loadingStats ? "…" : 0)}
+          color="#e8875a"
+          sub={`Year ${year}`}
+        />
+        <StatCard
+          label="Revenue"
+          value={
+            stats
+              ? `₹${(stats.totalRevenue ?? 0).toLocaleString("en-IN")}`
+              : loadingStats
+                ? "…"
+                : "₹0"
+          }
+          color="#5ab99c"
+          sub="Confirmed in year"
+        />
+        <StatCard
+          label="Event days"
+          value={stats?.totalEventDays ?? (loadingStats ? "…" : 0)}
+          color="#7c6fcd"
+        />
+        <StatCard
+          label="Occupancy"
+          value={
+            stats?.occupancyPercent != null
+              ? `${stats.occupancyPercent.toFixed(1)}%`
+              : loadingStats
+                ? "…"
+                : "0.0%"
+          }
+          color="#c9a84c"
+        />
       </div>
 
       {/* ── Full-year booking calendar ── */}
       <BookingCalendar
         year={year}
         onYearChange={setYear}
-        bookedDates={bookedDates}
-        onToggle={toggleDate}
+        bookedDates={new Set()}
+        onToggle={() => {}}
       />
 
     </div>

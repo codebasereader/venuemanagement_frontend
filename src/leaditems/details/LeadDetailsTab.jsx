@@ -65,7 +65,19 @@ function Card({ title, children }) {
   );
 }
 
-export default function LeadDetailsTab({ lead }) {
+const editBtnStyle = {
+  padding: "8px 14px",
+  borderRadius: 12,
+  border: "1px solid #d4cfc4",
+  background: "#f5f3ef",
+  color: "#1a1917",
+  fontFamily: "'DM Sans', sans-serif",
+  fontSize: 13,
+  fontWeight: 800,
+  cursor: "pointer",
+};
+
+export default function LeadDetailsTab({ lead, onEditClick }) {
   const startAt = lead?.specialDay?.startAt || null;
   const endAt = lead?.specialDay?.endAt || null;
   const durationHours = lead?.specialDay?.durationHours ?? "—";
@@ -89,6 +101,24 @@ export default function LeadDetailsTab({ lead }) {
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+        }}
+      >
+        {onEditClick && (
+          <button
+            type="button"
+            onClick={onEditClick}
+            style={editBtnStyle}
+          >
+            Edit lead
+          </button>
+        )}
+      </div>
+
       <Card title="Personal details">
         <InfoRow label="Name" value={contactName} />
         <div style={{ borderTop: "1px solid #f1f0ee" }} />

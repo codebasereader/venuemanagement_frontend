@@ -4,7 +4,7 @@ import DashboardLayout from "./dashboardlayout/DashboardLayout";
 import Home from "./pages/Home";
 import Leads from "./pages/Leads";
 import LeadDetailsPage from "./pages/leads/LeadDetailsPage.jsx";
-import Calendar from "./pages/Calendar";
+import Calendar from "./pages/admin/calendar/Calendar.jsx";
 import Profile from "./pages/Profile";
 import VenueProfile from "./profileitems/venueprofile/VenueProfile";
 import ViewSpaces from "./profileitems/spaces/ViewSpaces";
@@ -14,6 +14,7 @@ import ViewUsers from "./pages/admin/users/ViewUsers";
 import ViewVenues from "./pages/admin/venues/ViewVenues";
 import LoginPage from "./pages/login/LoginPage";
 import { ROLES } from "../config";
+import CalendarMonthly from "./pages/CalendarMonthly.jsx";
 
 function LoginGuard() {
   const { is_logged_in, role } = useSelector((state) => state.user.value);
@@ -45,7 +46,7 @@ export default function App() {
           <Route index element={<DashboardIndex />} />
           <Route path="leads" element={<Leads />} />
           <Route path="leads/:leadId" element={<LeadDetailsPage />} />
-          <Route path="calendar" element={<Calendar />} />
+          <Route path="calendar" element={<CalendarMonthly />} />
           <Route path="profile" element={<Outlet />}>
             <Route index element={<Profile />} />
             <Route path="venue" element={<VenueProfile />} />
@@ -55,6 +56,7 @@ export default function App() {
           </Route>
           <Route path="users" element={<ViewUsers />} />
           <Route path="venues" element={<ViewVenues />} />
+          <Route path="calendar" element={<Calendar />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Route>

@@ -44,25 +44,11 @@ const ChevronLeftIcon = ({ size = 14 }) => (
   </svg>
 );
 
-const BellIcon = ({ size = 18 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-  </svg>
-);
-
 const LogoutIcon = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
     <polyline points="16 17 21 12 16 7" />
     <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-);
-
-const SearchIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
 
@@ -275,18 +261,19 @@ export default function DashboardLayout() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* Top bar */}
-        <header className="h-[60px] bg-[#faf9f7] border-b border-[#ece9e4] flex items-center justify-between px-6 shrink-0">
-          <div className="flex items-center gap-2 bg-[#f0ede8] rounded-[10px] py-2 px-3.5 w-[220px]">
-            <SearchIcon />
-            <span className="text-[13px] text-[#9a9896] font-normal">Search…</span>
-          </div>
-
+        <header className="h-[60px] bg-[#faf9f7] border-b border-[#ece9e4] flex items-center justify-end px-6 shrink-0">
           <div className="flex items-center gap-3">
-            <button className="relative bg-[#f0ede8] border-none rounded-[10px] p-2 cursor-pointer flex items-center justify-center text-[#6b6966] hover:bg-[#e8e5e0] transition-colors duration-150">
-              <BellIcon size={16} />
-              <span className="absolute top-1.5 right-1.5 w-[7px] h-[7px] bg-[#e8875a] rounded-full border-[1.5px] border-[#faf9f7]" />
-            </button>
-            {isMobile && <Avatar name={name} />}
+            <Avatar name={name} />
+            {isMobile && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] border-none bg-[#fde8e6] text-[#d94f3d] text-[12px] font-semibold cursor-pointer hover:bg-[#fbd0cc] transition-colors duration-150"
+              >
+                <LogoutIcon size={14} />
+                <span className="hidden xs:inline">Logout</span>
+              </button>
+            )}
           </div>
         </header>
 

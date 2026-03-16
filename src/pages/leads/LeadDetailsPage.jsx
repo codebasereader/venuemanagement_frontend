@@ -7,6 +7,7 @@ import LeadTabs from "../../leaditems/details/LeadTabs.jsx";
 import LeadDetailsTab from "../../leaditems/details/LeadDetailsTab.jsx";
 import LeadQuotesTab from "../../leaditems/details/LeadQuotesTab.jsx";
 import LeadPaymentsTab from "../../leaditems/details/LeadPaymentsTab.jsx";
+import LeadCommissionsTab from "../../leaditems/details/LeadCommissionsTab.jsx";
 
 function BackIcon({ size = 16 }) {
   return (
@@ -146,27 +147,6 @@ export default function LeadDetailsPage() {
             </div>
           </div>
         </div>
-
-        {!loading && lead && (
-          <button
-            type="button"
-            onClick={() => setIsEditOpen(true)}
-            style={{
-              padding: "10px 16px",
-              borderRadius: 12,
-              border: "1px solid #d4cfc4",
-              background: "#f5f3ef",
-              color: "#1a1917",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 14,
-              fontWeight: 800,
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            Edit
-          </button>
-        )}
       </div>
 
       <div style={{ marginBottom: 12 }}>
@@ -229,9 +209,15 @@ export default function LeadDetailsPage() {
 
       {!loading && lead && (
         <div style={{ marginTop: 12 }}>
-          {activeTab === "details" && <LeadDetailsTab lead={lead} />}
+          {activeTab === "details" && (
+            <LeadDetailsTab
+              lead={lead}
+              onEditClick={() => setIsEditOpen(true)}
+            />
+          )}
           {activeTab === "quotes" && <LeadQuotesTab lead={lead} />}
           {activeTab === "payments" && <LeadPaymentsTab lead={lead} />}
+          {activeTab === "commissions" && <LeadCommissionsTab lead={lead} />}
         </div>
       )}
 

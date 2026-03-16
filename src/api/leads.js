@@ -24,6 +24,47 @@ export async function listLeads(venueId, token, { status } = {}) {
   return unwrapData(res);
 }
 
+/**
+ * List confirmed leads for a venue.
+ *
+ * Backend route:
+ *   GET /api/venues/{venueId}/leads/confirmed?bookingType=venue_buyout
+ *
+ * Example:
+ *   listConfirmedLeads(venueId, token, { bookingType: 'space_buyout' })
+ *   → will fetch only space-buyout bookings.
+ */
+export async function listConfirmedLeads(venueId, token, params = {}) {
+  const res = await axios.get(
+    `${API_BASE_URL}venues/${venueId}/leads/confirmed`,
+    {
+      headers: authHeaders(token),
+      params,
+    },
+  );
+  return unwrapData(res);
+}
+
+/**
+ * Get confirmed-leads stats for a specific month/year.
+ *
+ * Backend route:
+ *   GET /api/venues/{venueId}/leads/confirmed/stats?year=2026&month=3
+ *
+ * Example:
+ *   listConfirmedLeadStats(venueId, token, { year: 2026, month: 3 })
+ */
+export async function listConfirmedLeadStats(venueId, token, params) {
+  const res = await axios.get(
+    `${API_BASE_URL}venues/${venueId}/leads/confirmed/stats`,
+    {
+      headers: authHeaders(token),
+      params,
+    },
+  );
+  return unwrapData(res);
+}
+
 export async function getLeadById(venueId, leadId, token) {
   const res = await axios.get(`${API_BASE_URL}venues/${venueId}/leads/${leadId}`, {
     headers: authHeaders(token),

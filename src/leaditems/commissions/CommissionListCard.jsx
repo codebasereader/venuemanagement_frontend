@@ -1,12 +1,27 @@
 import React from "react";
 import { formatINR } from "../quotes/quoteMath.js";
-import PaymentSectionHeader from "./PaymentSectionHeader.jsx";
 
 const cardStyle = {
   background: "white",
   borderRadius: 16,
   border: "1px solid #ece9e4",
   padding: 16,
+};
+
+const headerRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: 8,
+  marginBottom: 6,
+};
+
+const titleStyle = {
+  fontSize: 13,
+  fontWeight: 900,
+  color: "#1a1917",
+  fontFamily: "'DM Sans', sans-serif",
 };
 
 const addBtnStyle = {
@@ -24,39 +39,28 @@ const addBtnStyle = {
   cursor: "pointer",
 };
 
-const reminderRowStyle = {
+const rowStyle = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
   flexWrap: "wrap",
-  gap: 10,
-  padding: "12px 0",
+  gap: 8,
+  padding: "10px 0",
   borderTop: "1px solid #f1f0ee",
 };
 
 const iconBtnStyle = {
-  width: 32,
-  height: 32,
+  width: 30,
+  height: 30,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   borderRadius: 8,
   border: "1px solid #e8e6e2",
-  background: "#faf9f7",
+  background: "transparent",
   cursor: "pointer",
   flexShrink: 0,
-};
-
-const receivedBtnStyle = {
-  padding: "6px 12px",
-  borderRadius: 8,
-  border: "none",
-  background: "#c9a84c",
-  color: "#1a1917",
-  fontFamily: "'DM Sans', sans-serif",
-  fontSize: 12,
-  fontWeight: 800,
-  cursor: "pointer",
+  color: "#6b6966",
 };
 
 function formatDate(iso) {
@@ -64,10 +68,16 @@ function formatDate(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
+    day: "2-digit",
+    month: "2-digit",
     year: "numeric",
   });
+}
+
+function methodLabel(method) {
+  if (method === "account") return "BANK / ACCOUNT";
+  if (method === "cash") return "CASH";
+  return (method || "").toUpperCase() || "—";
 }
 
 function PlusIcon({ size = 14 }) {
@@ -120,46 +130,41 @@ function TrashIcon({ size = 14 }) {
   );
 }
 
-export default function PaymentRemindersCard({
-  reminders = [],
+export default function CommissionListCard({
+  title,
+  commissions = [],
   onAdd,
   onEdit,
   onDelete,
-  onReceived,
-  loading = false,
   actionLoadingId = null,
+  emptyMessage,
 }) {
+  const total = commissions.reduce(
+    (sum, c) => sum + (Number(c.amount) || 0),
+    0,
+  );
+
   return (
     <div style={cardStyle}>
-      <PaymentSectionHeader
-        title="Payment reminders"
-        action={
-          <button
-            type="button"
-            onClick={onAdd}
-            disabled={loading}
-            style={addBtnStyle}
-          >
-            <PlusIcon /> Add
-          </button>
-        }
-      />
+      <div style={headerRowStyle}>
+        <span style={titleStyle}>{title}</span>
+        <button type="button" onClick={onAdd} style={addBtnStyle}>
+          <PlusIcon /> Add
+        </button>
+      </div>
+      <div
+        style={{
+          fontSize: 12,
+          color: "#6b6966",
+          fontFamily: "'DM Sans', sans-serif",
+          marginBottom: 8,
+        }}
+      >
+        Total: {formatINR(total)}
+      </div>
       <div style={{ borderTop: "1px solid #f1f0ee" }} />
 
-      {loading && reminders.length === 0 && (
-        <div
-          style={{
-            padding: "16px 0",
-            fontSize: 13,
-            color: "#6b6966",
-            fontFamily: "'DM Sans', sans-serif",
-          }}
-        >
-          Loading…
-        </div>
-      )}
-
-      {!loading && reminders.length === 0 && (
+      {commissions.length === 0 && (
         <p
           style={{
             margin: "12px 0 0",
@@ -168,25 +173,25 @@ export default function PaymentRemindersCard({
             fontFamily: "'DM Sans', sans-serif",
           }}
         >
-          No payment reminders yet. Add one to track expected payments.
+          {emptyMessage ||
+            "No commissions recorded yet. Use Add to create one."}
         </p>
       )}
 
-      {reminders.map((r) => {
-        const isReceived = r.status === "received" || r.paymentId;
-        const busy = actionLoadingId === r._id;
+      {commissions.map((c) => {
+        const busy = actionLoadingId === c._id;
         return (
-          <div key={r._id} style={reminderRowStyle}>
+          <div key={c._id} style={rowStyle}>
             <div style={{ minWidth: 0 }}>
               <div
                 style={{
                   fontSize: 14,
-                  fontWeight: 800,
+                  fontWeight: 900,
                   color: "#1a1917",
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               >
-                {formatINR(r.expectedAmount ?? 0)}
+                {c.vendorName || "—"}
               </div>
               <div
                 style={{
@@ -196,44 +201,33 @@ export default function PaymentRemindersCard({
                   marginTop: 2,
                 }}
               >
-                {formatDate(r.expectedDate)}
+                {formatINR(c.amount ?? 0)} • {methodLabel(c.method)} •{" "}
+                {formatDate(c.givenDate)}
               </div>
             </div>
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
+                gap: 6,
                 flexWrap: "wrap",
               }}
             >
-              {!isReceived && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => onEdit(r)}
-                    disabled={busy}
-                    style={iconBtnStyle}
-                    title="Edit"
-                    aria-label="Edit"
-                  >
-                    <PencilIcon />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onReceived(r)}
-                    disabled={busy}
-                    style={receivedBtnStyle}
-                  >
-                    {busy ? "…" : "Received"}
-                  </button>
-                </>
-              )}
               <button
                 type="button"
-                onClick={() => onDelete(r)}
+                onClick={() => onEdit?.(c)}
                 disabled={busy}
-                style={{ ...iconBtnStyle, color: "#a33b2d" }}
+                style={iconBtnStyle}
+                title="Edit"
+                aria-label="Edit"
+              >
+                <PencilIcon />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDelete?.(c)}
+                disabled={busy}
+                style={iconBtnStyle}
                 title="Delete"
                 aria-label="Delete"
               >
@@ -246,3 +240,4 @@ export default function PaymentRemindersCard({
     </div>
   );
 }
+
