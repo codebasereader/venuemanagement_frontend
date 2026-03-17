@@ -284,8 +284,8 @@ const VENUE_ITEMS = [
   { icon: SpacesIcon, label: "Spaces", description: "Manage venue spaces" },
   { icon: PricingIcon, label: "Pricing", description: "Rack rates, add-ons" },
   { icon: GalleryIcon, label: "Gallery", description: "Photos and albums" },
-  { icon: TemplatesIcon, label: "Templates", description: "Message templates" },
-  { icon: MicrositeIcon, label: "Microsite", description: "Public venue page" },
+  // { icon: TemplatesIcon, label: "Templates", description: "Message templates" },
+  // { icon: MicrositeIcon, label: "Microsite", description: "Public venue page" },
 ];
 
 export default function Profile() {

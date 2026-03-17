@@ -53,11 +53,7 @@ const CalendarDayCell = memo(function CalendarDayCell({
   let fw = 400;
   let border = "none";
 
-  if (isBooked) {
-    bg = "#e8875a";
-    color = "#ffffff";
-    fw = 700;
-  } else if (religiousType && RELIGIOUS_COLORS[religiousType]) {
+  if (religiousType && RELIGIOUS_COLORS[religiousType]) {
     bg = RELIGIOUS_COLORS[religiousType];
     color = religiousType === "less_auspicious" ? "#1a1917" : "#ffffff";
     fw = 600;
@@ -94,7 +90,40 @@ const CalendarDayCell = memo(function CalendarDayCell({
       }}
       // No hover interaction in read-only mode
     >
-      {day}
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "100%",
+          height: "100%",
+        }}
+      >
+        <span>{day}</span>
+        {isBooked && (
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: 3,
+              right: 3,
+              width: 11,
+              height: 11,
+              borderRadius: "50%",
+              background: "#1a1917",
+              color: "#ffffff",
+              fontSize: 7,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 0 0 1px rgba(255,255,255,0.8)",
+            }}
+          >
+            ✓
+          </span>
+        )}
+      </div>
     </button>
   );
 });
@@ -171,20 +200,34 @@ const MonthGrid = memo(function MonthGrid({ year, month, bookedDates, blockedDat
 
 function CalendarLegend() {
   const items = [
-    { label: "Booked",           bg: "#e8875a", border: "none" },
-    { label: "Today",            bg: "#ede8ff", border: "1.5px solid #7c6fcd" },
-    { label: "Most auspicious",  bg: RELIGIOUS_COLORS.most_auspicious, border: "none" },
-    { label: "Auspicious",       bg: RELIGIOUS_COLORS.auspicious, border: "none" },
-    { label: "Less auspicious",  bg: RELIGIOUS_COLORS.less_auspicious, border: "none" },
+    { key: "booked", label: "Booked (tick mark)", bg: "#1a1917", border: "1px solid #f5f4f1", isTick: true },
+    { key: "today", label: "Today",            bg: "#ede8ff", border: "1.5px solid #7c6fcd" },
+    { key: "most",  label: "Highly Auspicious",  bg: RELIGIOUS_COLORS.most_auspicious, border: "none" },
+    { key: "ausp",  label: "Auspicious",       bg: RELIGIOUS_COLORS.auspicious, border: "none" },
+    { key: "less",  label: "Less auspicious",  bg: RELIGIOUS_COLORS.less_auspicious, border: "none" },
   ];
   return (
     <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "20px" }}>
-      {items.map(({ label, bg, border }) => (
-        <div key={label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span aria-hidden="true" style={{
-            display: "inline-block", width: "10px", height: "10px",
-            borderRadius: "50%", background: bg, border, flexShrink: 0,
-          }} />
+      {items.map(({ key, label, bg, border, isTick }) => (
+        <div key={key} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span
+            aria-hidden="true"
+            style={{
+              display: "inline-flex",
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              background: bg,
+              border,
+              flexShrink: 0,
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 7,
+              color: "#ffffff",
+            }}
+          >
+            {isTick ? "✓" : ""}
+          </span>
           <span style={{ fontSize: "12px", color: "#9a9896", fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
             {label}
           </span>

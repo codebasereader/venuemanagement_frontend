@@ -261,7 +261,16 @@ export default function DashboardLayout() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* Top bar */}
-        <header className="h-[60px] bg-[#faf9f7] border-b border-[#ece9e4] flex items-center justify-end px-6 shrink-0">
+        <header className="h-[60px] bg-[#faf9f7] border-b border-[#ece9e4] flex items-center justify-between px-6 shrink-0">
+          {isMobile ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[15px] font-bold text-[#1a1917] font-serif tracking-[-0.01em]">
+                Venue Management
+              </span>
+            </div>
+          ) : (
+            <div />
+          )}
           <div className="flex items-center gap-3">
             <Avatar name={name} />
             {isMobile && (

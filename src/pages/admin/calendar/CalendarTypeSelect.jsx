@@ -1,7 +1,7 @@
 import React from "react";
 
 export const TYPES = [
-  { key: "most_auspicious", label: "Most auspicious" },
+  { key: "most_auspicious", label: "Highly Auspicious" },
   { key: "auspicious", label: "Auspicious" },
   { key: "less_auspicious", label: "Less auspicious" },
 ];

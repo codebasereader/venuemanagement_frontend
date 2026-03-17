@@ -5,7 +5,7 @@ This document describes the **recommended payloads** and **backend schema** for 
 The frontend lets the user:
 
 - Choose a religion tab (Hindu / Muslim / Christian)
-- Choose a **type** (most auspicious / auspicious / less auspicious)
+- Choose a **type** (Highly Auspicious / auspicious / less auspicious)
 - Pick **multiple dates** via the calendar
 
 ---
@@ -131,7 +131,7 @@ Examples:
 
 - `GET /api/calendar-days` — all days
 - `GET /api/calendar-days?religion=hindu` — Hindu only
-- `GET /api/calendar-days?religion=hindu&type=most_auspicious&year=2026&month=1` — Hindu, most auspicious, Jan 2026
+- `GET /api/calendar-days?religion=hindu&type=most_auspicious&year=2026&month=1` — Hindu, Highly Auspicious, Jan 2026
 
 ### Response (200)
 
