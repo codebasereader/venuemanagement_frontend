@@ -4,7 +4,8 @@ export const LEAD_TABS = [
   { key: "details", label: "Details" },
   { key: "quotes", label: "Quotes" },
   { key: "payments", label: "Payments" },
-  { key: "commissions", label: "Commissions" },
+  { key: "commissions", label: "Commissions/Vendor" },
+  { key: "profits-losses", label: "Profits & losses" },
 ];
 
 export default function LeadTabs({ activeKey, onChange }) {

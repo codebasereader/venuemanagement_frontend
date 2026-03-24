@@ -31,6 +31,16 @@ const CalendarIcon = ({ size = 20 }) => (
   </svg>
 );
 
+const VendorsIcon = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 21h18" />
+    <path d="M5 21V7l7-4 7 4v14" />
+    <path d="M9 9h.01" />
+    <path d="M12 9h.01" />
+    <path d="M15 9h.01" />
+  </svg>
+);
+
 const ProfileIcon = ({ size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -73,6 +83,7 @@ const VenuesIcon = ({ size = 20 }) => (
 const inchargeNavItems = [
   { path: "/", label: "Home", icon: HomeIcon, end: true },
   { path: "/leads", label: "Leads", icon: LeadsIcon },
+  { path: "/vendors", label: "Vendor's List", icon: VendorsIcon },
   { path: "/calendar", label: "Calendar", icon: CalendarIcon },
   { path: "/profile", label: "Profile", icon: ProfileIcon },
 ];

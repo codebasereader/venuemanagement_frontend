@@ -1,4 +1,5 @@
 import React from "react";
+import { isBrideGroomEventType } from "../AddLeads.jsx";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -18,6 +19,14 @@ function niceEventType(lead) {
   const type = lead?.eventType || "";
   if (type === "other") return (lead?.eventTypeOther || "Other").toUpperCase();
   return String(type || "—").toUpperCase();
+}
+
+function niceEventStatus(lead) {
+  const s = String(lead?.eventStatus || "").toLowerCase();
+  if (s === "in_progress") return "In progress";
+  if (s === "confirmed") return "Confirmed";
+  if (s === "cancelled") return "Cancelled";
+  return "—";
 }
 
 function niceRole(role) {
@@ -68,8 +77,8 @@ function Card({ title, children }) {
 const editBtnStyle = {
   padding: "8px 14px",
   borderRadius: 12,
-  border: "1px solid #d4cfc4",
-  background: "#f5f3ef",
+  border: "1px solid #b9943b",
+  background: "#c9a84c",
   color: "#1a1917",
   fontFamily: "'DM Sans', sans-serif",
   fontSize: 13,
@@ -98,6 +107,9 @@ export default function LeadDetailsTab({ lead, onEditClick }) {
   const contactName = lead?.contact?.name ?? "—";
   const contactPhone = lead?.contact?.phone ?? "—";
   const contactAltPhone = lead?.contact?.altPhone;
+  const c = lead?.contact || {};
+  const showCouple = isBrideGroomEventType(lead?.eventType);
+  const meetings = Array.isArray(lead?.meetings) ? lead.meetings : [];
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
@@ -121,6 +133,14 @@ export default function LeadDetailsTab({ lead, onEditClick }) {
 
       <Card title="Personal details">
         <InfoRow label="Name" value={contactName} />
+        {showCouple && (
+          <>
+            <div style={{ borderTop: "1px solid #f1f0ee" }} />
+            <InfoRow label="Bride" value={c.brideName} />
+            <div style={{ borderTop: "1px solid #f1f0ee" }} />
+            <InfoRow label="Groom" value={c.groomName} />
+          </>
+        )}
         <div style={{ borderTop: "1px solid #f1f0ee" }} />
         <InfoRow label="Phone" value={contactPhone} />
         {contactAltPhone != null && String(contactAltPhone).trim() !== "" && (
@@ -129,9 +149,41 @@ export default function LeadDetailsTab({ lead, onEditClick }) {
             <InfoRow label="Alternative phone" value={contactAltPhone} />
           </>
         )}
+        {c.email != null && String(c.email).trim() !== "" && (
+          <>
+            <div style={{ borderTop: "1px solid #f1f0ee" }} />
+            <InfoRow label="Email" value={c.email} />
+          </>
+        )}
+        {c.stateCityAddress != null && String(c.stateCityAddress).trim() !== "" && (
+          <>
+            <div style={{ borderTop: "1px solid #f1f0ee" }} />
+            <InfoRow label="State, city & address" value={c.stateCityAddress} />
+          </>
+        )}
+        {c.pan != null && String(c.pan).trim() !== "" && (
+          <>
+            <div style={{ borderTop: "1px solid #f1f0ee" }} />
+            <InfoRow label="PAN" value={c.pan} />
+          </>
+        )}
+        {c.gst != null && String(c.gst).trim() !== "" && (
+          <>
+            <div style={{ borderTop: "1px solid #f1f0ee" }} />
+            <InfoRow label="GST" value={c.gst} />
+          </>
+        )}
+        {c.companyName != null && String(c.companyName).trim() !== "" && (
+          <>
+            <div style={{ borderTop: "1px solid #f1f0ee" }} />
+            <InfoRow label="Company" value={c.companyName} />
+          </>
+        )}
       </Card>
 
       <Card title="Event">
+        <InfoRow label="Event status" value={niceEventStatus(lead)} />
+        <div style={{ borderTop: "1px solid #f1f0ee" }} />
         <InfoRow label="Event Type" value={niceEventType(lead)} />
         <div style={{ borderTop: "1px solid #f1f0ee" }} />
         <InfoRow label="Start Date" value={`${startDate} • ${startTime}`} />
@@ -141,6 +193,49 @@ export default function LeadDetailsTab({ lead, onEditClick }) {
         <InfoRow label="Duration" value={durationHours !== "—" ? `${durationHours} hours` : "—"} />
         <div style={{ borderTop: "1px solid #f1f0ee" }} />
         <InfoRow label="Guest Count" value={lead?.expectedGuests ?? "—"} />
+        {meetings.length > 0 && (
+          <>
+            <div style={{ borderTop: "1px solid #f1f0ee" }} />
+            <div style={{ padding: "10px 0" }}>
+              <div
+                style={{
+                  color: "#6b6966",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  fontFamily: "'DM Sans', sans-serif",
+                  marginBottom: 8,
+                }}
+              >
+                Meetings
+              </div>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: 18,
+                  color: "#1a1917",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                {meetings.map((m, i) => {
+                  const d = m.meetingAt ? new Date(m.meetingAt) : null;
+                  const when =
+                    d && !Number.isNaN(d.getTime())
+                      ? `${formatDate(m.meetingAt)} • ${formatTime(m.meetingAt)}`
+                      : "—";
+                  const note = m.notes ? String(m.notes) : "";
+                  return (
+                    <li key={m._id || m.id || i} style={{ marginBottom: 6 }}>
+                      {when}
+                      {note ? ` — ${note}` : ""}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </>
+        )}
       </Card>
 
       <Card title="System Information">

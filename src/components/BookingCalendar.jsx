@@ -33,6 +33,33 @@ const RELIGIOUS_COLORS = {
   less_auspicious: "#facc15",   // yellow
 };
 
+/** Booking "All" tab: color by faith (API returns rows with `religion`). */
+const RELIGION_VIEW_COLORS = {
+  christian: "#dc2626",
+  muslim: "#16a34a",
+  hindu: "#ea580c",
+};
+
+const FAITH_GRADIENT_ORDER = ["christian", "muslim", "hindu"];
+
+function faithsBackground(religions) {
+  const unique = [...new Set(religions.filter((r) => RELIGION_VIEW_COLORS[r]))];
+  const sorted = [...unique].sort(
+    (a, b) => FAITH_GRADIENT_ORDER.indexOf(a) - FAITH_GRADIENT_ORDER.indexOf(b),
+  );
+  if (sorted.length === 0) return null;
+  if (sorted.length === 1) return RELIGION_VIEW_COLORS[sorted[0]];
+  const step = 360 / sorted.length;
+  const stops = sorted
+    .map((rel, i) => {
+      const start = i * step;
+      const end = (i + 1) * step;
+      return `${RELIGION_VIEW_COLORS[rel]} ${start}deg ${end}deg`;
+    })
+    .join(", ");
+  return `conic-gradient(from 0deg, ${stops})`;
+}
+
 // ── CalendarDayCell ────────────────────────────────────────────
 // Single clickable day circle.
 
@@ -41,7 +68,8 @@ const CalendarDayCell = memo(function CalendarDayCell({
   year,
   month,
   isBooked,
-  religiousType,
+  /** Auspicious type string, or `{ mode: 'faith', religions: string[] }` for the All tab */
+  religiousEntry,
   dateKey,
   onToggle, // kept for API compatibility, but ignored (read‑only calendar)
   isLocked = false,
@@ -53,9 +81,26 @@ const CalendarDayCell = memo(function CalendarDayCell({
   let fw = 400;
   let border = "none";
 
-  if (religiousType && RELIGIOUS_COLORS[religiousType]) {
-    bg = RELIGIOUS_COLORS[religiousType];
-    color = religiousType === "less_auspicious" ? "#1a1917" : "#ffffff";
+  const faith =
+    religiousEntry &&
+    typeof religiousEntry === "object" &&
+    religiousEntry.mode === "faith" &&
+    Array.isArray(religiousEntry.religions)
+      ? religiousEntry.religions
+      : null;
+  const faithBg = faith?.length ? faithsBackground(faith) : null;
+
+  if (faithBg) {
+    bg = faithBg;
+    color = "#ffffff";
+    fw = 600;
+  } else if (
+    typeof religiousEntry === "string" &&
+    religiousEntry &&
+    RELIGIOUS_COLORS[religiousEntry]
+  ) {
+    bg = RELIGIOUS_COLORS[religiousEntry];
+    color = religiousEntry === "less_auspicious" ? "#1a1917" : "#ffffff";
     fw = 600;
   } else if (isToday) {
     bg = "#ede8ff";
@@ -184,7 +229,7 @@ const MonthGrid = memo(function MonthGrid({ year, month, bookedDates, blockedDat
               year={year}
               month={month}
               isBooked={bookedDates.has(key) || locked}
-              religiousType={religiousByDate.get(key)}
+              religiousEntry={religiousByDate.get(key)}
               dateKey={key}
               onToggle={onToggle}
               isLocked={locked}
@@ -198,14 +243,22 @@ const MonthGrid = memo(function MonthGrid({ year, month, bookedDates, blockedDat
 
 // ── CalendarLegend ─────────────────────────────────────────────
 
-function CalendarLegend() {
-  const items = [
+function CalendarLegend({ variant = "auspicious" }) {
+  const faithItems = [
+    { key: "booked", label: "Booked (tick mark)", bg: "#1a1917", border: "1px solid #f5f4f1", isTick: true },
+    { key: "today", label: "Today", bg: "#ede8ff", border: "1.5px solid #7c6fcd" },
+    { key: "christian", label: "Christian", bg: RELIGION_VIEW_COLORS.christian, border: "none" },
+    { key: "muslim", label: "Muslim", bg: RELIGION_VIEW_COLORS.muslim, border: "none" },
+    { key: "hindu", label: "Hindu", bg: RELIGION_VIEW_COLORS.hindu, border: "none" },
+  ];
+  const auspiciousItems = [
     { key: "booked", label: "Booked (tick mark)", bg: "#1a1917", border: "1px solid #f5f4f1", isTick: true },
     { key: "today", label: "Today",            bg: "#ede8ff", border: "1.5px solid #7c6fcd" },
     { key: "most",  label: "Highly Auspicious",  bg: RELIGIOUS_COLORS.most_auspicious, border: "none" },
     { key: "ausp",  label: "Auspicious",       bg: RELIGIOUS_COLORS.auspicious, border: "none" },
     { key: "less",  label: "Less auspicious",  bg: RELIGIOUS_COLORS.less_auspicious, border: "none" },
   ];
+  const items = variant === "faith" ? faithItems : auspiciousItems;
   return (
     <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "20px" }}>
       {items.map(({ key, label, bg, border, isTick }) => (
@@ -333,7 +386,7 @@ function YearSelector({ year, onChange }) {
 
 export default function BookingCalendar({ year, onYearChange, bookedDates, onToggle }) {
   const { access_token: accessToken, venueId } = useSelector((state) => state.user.value);
-  const [religion, setReligion] = useState("hindu");
+  const [religion, setReligion] = useState("all");
   const [religiousByDate, setReligiousByDate] = useState(new Map());
   const [blockedDates, setBlockedDates] = useState(new Set());
 
@@ -346,9 +399,23 @@ export default function BookingCalendar({ year, onYearChange, bookedDates, onTog
         const data = await listCalendarDays(accessToken, { religion, year });
         const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
         const map = new Map();
-        for (const item of arr) {
-          if (item?.date && item?.type) {
-            map.set(item.date, item.type);
+        if (religion === "all") {
+          const byDate = new Map();
+          for (const item of arr) {
+            if (!item?.date || !item?.religion) continue;
+            const r = String(item.religion).toLowerCase();
+            if (!RELIGION_VIEW_COLORS[r]) continue;
+            if (!byDate.has(item.date)) byDate.set(item.date, new Set());
+            byDate.get(item.date).add(r);
+          }
+          for (const [dateKey, set] of byDate) {
+            map.set(dateKey, { mode: "faith", religions: [...set] });
+          }
+        } else {
+          for (const item of arr) {
+            if (item?.date && item?.type) {
+              map.set(item.date, item.type);
+            }
           }
         }
         if (!cancelled) {
@@ -437,13 +504,13 @@ export default function BookingCalendar({ year, onYearChange, bookedDates, onTog
             Dates are auto-marked from confirmed leads and the religious calendar
           </p>
           <div style={{ marginTop: "4px" }}>
-            <CalendarTabs value={religion} onChange={setReligion} />
+            <CalendarTabs value={religion} onChange={setReligion} includeAllTab />
           </div>
         </div>
         <YearSelector year={year} onChange={onYearChange} />
       </div>
 
-      <CalendarLegend />
+      <CalendarLegend variant={religion === "all" ? "faith" : "auspicious"} />
 
       {/* 12 month grids — responsive columns */}
       <div style={{

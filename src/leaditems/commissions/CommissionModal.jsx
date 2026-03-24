@@ -87,14 +87,22 @@ export default function CommissionModal({
   const [method, setMethod] = useState("account");
   const [givenDate, setGivenDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [addGst, setAddGst] = useState(false);
+
+  const GST_RATE = 18;
 
   useEffect(() => {
     if (!isOpen) return;
     if (initialCommission) {
       setVendorId(initialCommission.vendorId || "");
-      setAmount(
-        initialCommission.amount != null ? String(initialCommission.amount) : "",
-      );
+      const hasGst = Boolean(initialCommission.gstIncluded);
+      const taxableAmount =
+        initialCommission.taxableAmount != null
+          ? initialCommission.taxableAmount
+          : hasGst
+            ? Number(initialCommission.amount || 0) / (1 + GST_RATE / 100)
+            : Number(initialCommission.amount || 0);
+      setAmount(taxableAmount > 0 ? String(Math.round(taxableAmount)) : "");
       setMethod(initialCommission.method || "account");
       const d = initialCommission.givenDate
         ? new Date(initialCommission.givenDate)
@@ -103,6 +111,7 @@ export default function CommissionModal({
         d && !Number.isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : "",
       );
       setNotes(initialCommission.notes || "");
+      setAddGst(hasGst);
     } else {
       setVendorId("");
       setAmount("");
@@ -110,6 +119,7 @@ export default function CommissionModal({
       const today = new Date();
       setGivenDate(today.toISOString().slice(0, 10));
       setNotes("");
+      setAddGst(false);
     }
   }, [isOpen, initialCommission]);
 
@@ -121,17 +131,23 @@ export default function CommissionModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const amt = moneyToNumber(amount);
+    const baseAmount = moneyToNumber(amount);
+    const gstAmount = addGst ? Math.round(baseAmount * (GST_RATE / 100)) : 0;
+    const totalAmount = baseAmount + gstAmount;
     const selectedVendor = vendors.find((v) => v._id === vendorId);
     const finalName = selectedVendor?.name || "";
-    if (!finalName || !givenDate || amt <= 0) return;
+    if (!finalName || !givenDate || baseAmount <= 0) return;
 
     const dateIso = new Date(givenDate).toISOString();
 
     onSubmit({
       direction,
       vendorName: finalName,
-      amount: amt,
+      amount: totalAmount,
+      taxableAmount: baseAmount,
+      gstIncluded: addGst,
+      gstRate: addGst ? GST_RATE : 0,
+      gstAmount,
       method,
       givenDate: dateIso,
       notes: notes.trim(),
@@ -141,6 +157,8 @@ export default function CommissionModal({
   if (!isOpen) return null;
 
   const amt = moneyToNumber(amount);
+  const gstAmount = addGst ? Math.round(amt * (GST_RATE / 100)) : 0;
+  const totalAmount = amt + gstAmount;
   const hasSelectedVendor = Boolean(vendorId);
   const canSubmit = amt > 0 && hasSelectedVendor && Boolean(givenDate.trim());
 
@@ -210,9 +228,44 @@ export default function CommissionModal({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="e.g. 15000"
-            style={{ ...inputStyle, marginBottom: 14 }}
+            style={{ ...inputStyle, marginBottom: 10 }}
             required
           />
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 10,
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#1a1917",
+              fontFamily: "'DM Sans', sans-serif",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={addGst}
+              onChange={(e) => setAddGst(e.target.checked)}
+            />
+            Add 18% GST
+          </label>
+          <div
+            style={{
+              marginBottom: 14,
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #ece9e4",
+              background: "#faf9f7",
+              color: "#1a1917",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            Base: ₹{amt.toLocaleString("en-IN")} {addGst ? `• GST(18%): ₹${gstAmount.toLocaleString("en-IN")} • Total: ₹${totalAmount.toLocaleString("en-IN")}` : ""}
+          </div>
 
           <label style={labelStyle}>Cash / Account</label>
           <select

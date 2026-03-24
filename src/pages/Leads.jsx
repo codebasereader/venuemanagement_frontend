@@ -44,10 +44,29 @@ function formatDateForInput(isoString) {
   return d.toISOString().slice(0, 10);
 }
 
+function niceEventType(lead) {
+  const type = String(lead?.eventType || "").trim().toLowerCase();
+  if (!type) return "—";
+  if (type === "other") {
+    return (lead?.eventTypeOther || "Other").trim() || "Other";
+  }
+  return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function eventStatusMeta(value) {
+  const s = String(value || "").toLowerCase();
+  if (s === "confirmed") return { label: "Confirmed", bg: "#dcfce7", color: "#166534", border: "#86efac" };
+  if (s === "cancelled") return { label: "Cancelled", bg: "#fee2e2", color: "#991b1b", border: "#fca5a5" };
+  if (s === "in_progress") return { label: "In progress", bg: "#fef3c7", color: "#92400e", border: "#fcd34d" };
+  return { label: "—", bg: "#f3f4f6", color: "#4b5563", border: "#d1d5db" };
+}
+
 function LeadCard({ lead, onViewDetails }) {
   const name = lead?.contact?.name || lead?.clientName || "—";
   const phone = lead?.contact?.phone || lead?.phone || "—";
   const createdAt = lead?.createdAt || lead?.created_at;
+  const status = eventStatusMeta(lead?.eventStatus);
+  const eventType = niceEventType(lead);
   return (
     <div
       style={{
@@ -61,6 +80,26 @@ function LeadCard({ lead, onViewDetails }) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "4px 10px",
+            borderRadius: 999,
+            border: `1px solid ${status.border}`,
+            background: status.bg,
+            color: status.color,
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: "capitalize",
+            lineHeight: 1.2,
+          }}
+        >
+          {status.label}
+        </span>
+      </div>
       <div style={{ flex: 1 }}>
         <p
           style={{
@@ -74,6 +113,9 @@ function LeadCard({ lead, onViewDetails }) {
         </p>
         <p style={{ margin: "0 0 4px", fontSize: "14px", color: "#6b6966" }}>
           {phone}
+        </p>
+        <p style={{ margin: "0 0 4px", fontSize: "13px", color: "#6b6966", fontWeight: 600 }}>
+          Event: {eventType}
         </p>
         <p style={{ margin: 0, fontSize: "13px", color: "#9a9896" }}>
           {createdAt ? `Created ${formatDate(createdAt)}` : "—"}

@@ -15,6 +15,8 @@ import ViewVenues from "./pages/admin/venues/ViewVenues";
 import LoginPage from "./pages/login/LoginPage";
 import { ROLES } from "../config";
 import CalendarMonthly from "./pages/CalendarMonthly.jsx";
+import Vendorslist from "./pages/Vendorslist.jsx";
+import VendorDetailsPage from "./pages/VendorDetailsPage.jsx";
 
 function LoginGuard() {
   const { is_logged_in, role } = useSelector((state) => state.user.value);
@@ -46,6 +48,8 @@ export default function App() {
           <Route index element={<DashboardIndex />} />
           <Route path="leads" element={<Leads />} />
           <Route path="leads/:leadId" element={<LeadDetailsPage />} />
+          <Route path="vendors" element={<Vendorslist />} />
+          <Route path="vendors/:vendorId" element={<VendorDetailsPage />} />
           <Route path="calendar" element={<CalendarMonthly />} />
           <Route path="profile" element={<Outlet />}>
             <Route index element={<Profile />} />

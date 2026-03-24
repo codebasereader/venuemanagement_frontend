@@ -45,37 +45,55 @@ export function normalizeAddons(items = []) {
 }
 
 /**
- * Venue GST applied to base rental; add-ons GST applied to add-ons total separately.
- * Subtotal = venue + venueGst + addons + addonGst. Total = subtotal - discount.
+ * Venue flow:
+ *   Net Amount = Venue Rental - Discount
+ *   GST is calculated on Net Amount
+ *   Venue Total = Net Amount + GST
+ *
+ * Add-ons flow:
+ *   Add-ons GST applied separately to selected add-ons total.
+ *
+ * Grand Total = Venue Total + Add-ons Total (incl GST)
  */
 export function computeTotals({
   basePrice = 0,
   addons = [],
+  maintenanceCharge = 0,
   durationHours = 12,
   gstRate = GST_RATE,
   discount = 0,
 }) {
   const venueBase = moneyToNumber(basePrice);
-  const venueGst = Math.round(venueBase * gstRate);
+  const discountAmount = Math.max(0, moneyToNumber(discount));
+  const venueNet = Math.max(0, venueBase - discountAmount);
+  const venueGst = Math.round(venueNet * gstRate);
+  const venueTotal = venueNet + venueGst;
 
-  const addonTotal = addons
+  const selectedAddonTotal = addons
     .filter((a) => a.selected)
     .reduce((sum, a) => {
       const unit = moneyToNumber(a?.prices?.[String(durationHours)] ?? 0);
       const qty = Math.max(0, Number(a.quantity) || 0);
       return sum + unit * qty;
     }, 0);
+  const maintenanceAmount = Math.max(0, moneyToNumber(maintenanceCharge));
+  const addonTotal = selectedAddonTotal + maintenanceAmount;
   const addonGst = Math.round(addonTotal * gstRate);
+  const addonsTotalWithGst = addonTotal + addonGst;
 
-  const subtotal = venueBase + venueGst + addonTotal + addonGst;
-  const discountAmount = Math.max(0, moneyToNumber(discount));
-  const total = Math.max(0, subtotal - discountAmount);
+  const subtotal = venueTotal + addonsTotalWithGst;
+  const total = subtotal;
 
   return {
     venueBase,
+    venueNet,
     venueGst,
+    venueTotal,
+    maintenanceCharge: maintenanceAmount,
+    selectedAddonTotal,
     addonTotal,
     addonGst,
+    addonsTotalWithGst,
     subtotal,
     discount: discountAmount,
     total,

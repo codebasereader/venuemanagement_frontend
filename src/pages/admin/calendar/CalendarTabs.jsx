@@ -6,14 +6,17 @@ const RELIGIONS = [
   { key: "christian", label: "Christian" },
 ];
 
+const ALL_TAB = { key: "all", label: "All" };
+
 function classNames(...args) {
   return args.filter(Boolean).join(" ");
 }
 
-export function CalendarTabs({ value, onChange }) {
+export function CalendarTabs({ value, onChange, includeAllTab = false }) {
+  const tabs = includeAllTab ? [ALL_TAB, ...RELIGIONS] : RELIGIONS;
   return (
     <div className="inline-flex rounded-xl bg-[#f0ede8] p-1 text-xs font-semibold">
-      {RELIGIONS.map((r) => {
+      {tabs.map((r) => {
         const active = value === r.key;
         return (
           <button

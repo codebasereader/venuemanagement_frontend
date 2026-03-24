@@ -8,6 +8,7 @@ import LeadDetailsTab from "../../leaditems/details/LeadDetailsTab.jsx";
 import LeadQuotesTab from "../../leaditems/details/LeadQuotesTab.jsx";
 import LeadPaymentsTab from "../../leaditems/details/LeadPaymentsTab.jsx";
 import LeadCommissionsTab from "../../leaditems/details/LeadCommissionsTab.jsx";
+import LeadProfitLossTab from "../../leaditems/profitsLoss/LeadProfitLossTab.jsx";
 
 function BackIcon({ size = 16 }) {
   return (
@@ -218,6 +219,7 @@ export default function LeadDetailsPage() {
           {activeTab === "quotes" && <LeadQuotesTab lead={lead} />}
           {activeTab === "payments" && <LeadPaymentsTab lead={lead} />}
           {activeTab === "commissions" && <LeadCommissionsTab lead={lead} />}
+          {activeTab === "profits-losses" && <LeadProfitLossTab lead={lead} />}
         </div>
       )}
 

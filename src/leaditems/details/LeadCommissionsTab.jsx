@@ -6,10 +6,19 @@ import {
   updateCommission,
   deleteCommission,
 } from "../../api/commissions.js";
+import {
+  listLabours,
+  createLabour,
+  updateLabour,
+  deleteLabour,
+} from "../../api/labours.js";
 import { listVendors, createVendor } from "../../api/vendors.js";
 import CommissionListCard from "../commissions/CommissionListCard.jsx";
 import CommissionPieCard from "../commissions/CommissionPieCard.jsx";
 import CommissionModal from "../commissions/CommissionModal.jsx";
+import LabourListCard from "../commissions/LabourListCard.jsx";
+import LabourModal from "../commissions/LabourModal.jsx";
+import LabourTabs from "../commissions/LabourTabs.jsx";
 import VendorModal from "../vendors/VendorModal.jsx";
 
 function ConfirmDeleteModal({ title, message, loading, onCancel, onConfirm }) {
@@ -134,6 +143,12 @@ export default function LeadCommissionsTab({ lead }) {
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [activeInnerTab, setActiveInnerTab] = useState("commissions");
+  const [labourItems, setLabourItems] = useState([]);
+  const [editingLabour, setEditingLabour] = useState(null);
+  const [labourModalOpen, setLabourModalOpen] = useState(false);
+  const [labourSubmitting, setLabourSubmitting] = useState(false);
+  const [deleteLabourTarget, setDeleteLabourTarget] = useState(null);
 
   const fetchCommissions = useCallback(async () => {
     if (!venueId || !leadId || !token) return;
@@ -167,10 +182,26 @@ export default function LeadCommissionsTab({ lead }) {
     }
   }, [venueId, token]);
 
+  const fetchLabours = useCallback(async () => {
+    if (!venueId || !leadId || !token) return;
+    try {
+      const data = await listLabours(venueId, leadId, token);
+      setLabourItems(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(
+        err.response?.data?.error?.message ||
+          err.message ||
+          "Failed to load labour entries.",
+      );
+      setLabourItems([]);
+    }
+  }, [venueId, leadId, token]);
+
   useEffect(() => {
     fetchCommissions();
     fetchVendors();
-  }, [fetchCommissions, fetchVendors]);
+    fetchLabours();
+  }, [fetchCommissions, fetchVendors, fetchLabours]);
 
   const outflowItems = useMemo(
     () => items.filter((c) => c.direction === "outflow"),
@@ -188,6 +219,10 @@ export default function LeadCommissionsTab({ lead }) {
   const inflowTotal = useMemo(
     () => inflowItems.reduce((sum, c) => sum + (Number(c.amount) || 0), 0),
     [inflowItems],
+  );
+  const labourTotal = useMemo(
+    () => labourItems.reduce((sum, l) => sum + (Number(l.amount) || 0), 0),
+    [labourItems],
   );
 
   const openAdd = (direction) => {
@@ -278,6 +313,67 @@ export default function LeadCommissionsTab({ lead }) {
     [venueId, token],
   );
 
+  const handleLabourSubmit = useCallback(
+    async (payload) => {
+      if (!venueId || !leadId || !token) return;
+      setLabourSubmitting(true);
+      setError("");
+      try {
+        const body = {
+          date: payload.date,
+          shiftType: payload.shiftType,
+          labourCount: Number(payload.labourCount) || 0,
+          dayRate: Number(payload.dayRate) || 0,
+          nightRate: Number(payload.nightRate) || 0,
+          amount: Number(payload.amount) || 0,
+          taxableAmount: Number(payload.taxableAmount) || 0,
+          gstIncluded: Boolean(payload.gstIncluded),
+          gstRate: Number(payload.gstRate) || 0,
+          gstAmount: Number(payload.gstAmount) || 0,
+          notes: payload.notes || "",
+        };
+        if (editingLabour?._id) {
+          await updateLabour(venueId, leadId, editingLabour._id, body, token);
+        } else {
+          await createLabour(venueId, leadId, body, token);
+        }
+        await fetchLabours();
+        setEditingLabour(null);
+        setLabourModalOpen(false);
+      } catch (err) {
+        setError(
+          err.response?.data?.error?.message ||
+            err.message ||
+            "Failed to save labour entry.",
+        );
+      } finally {
+        setLabourSubmitting(false);
+      }
+    },
+    [venueId, leadId, token, editingLabour, fetchLabours],
+  );
+
+  const handleDeleteLabour = useCallback(
+    async (target) => {
+      if (!venueId || !leadId || !token) return;
+      setActionLoadingId(target._id);
+      setError("");
+      try {
+        await deleteLabour(venueId, leadId, target._id, token);
+        await fetchLabours();
+      } catch (err) {
+        setError(
+          err.response?.data?.error?.message ||
+            err.message ||
+            "Failed to delete labour entry.",
+        );
+      } finally {
+        setActionLoadingId(null);
+      }
+    },
+    [venueId, leadId, token, fetchLabours],
+  );
+
   return (
     <div style={{ display: "grid", gap: 12 }}>
       {!!error && (
@@ -313,28 +409,48 @@ export default function LeadCommissionsTab({ lead }) {
 
       {!loading && (
         <>
+          <LabourTabs activeKey={activeInnerTab} onChange={setActiveInnerTab} />
           <CommissionPieCard
             outflowTotal={outflowTotal}
             inflowTotal={inflowTotal}
+            labourTotal={labourTotal}
           />
-          <CommissionListCard
-            title="Outflow cash (you pay)"
-            commissions={outflowItems}
-            onAdd={() => openAdd("outflow")}
-            onEdit={openEdit}
-            onDelete={(c) => setDeleteTarget(c)}
-            actionLoadingId={actionLoadingId}
-            emptyMessage="No outflow commissions yet. Use Add to record what you pay to others."
-          />
-          <CommissionListCard
-            title="Inflow cash (you receive)"
-            commissions={inflowItems}
-            onAdd={() => openAdd("inflow")}
-            onEdit={openEdit}
-            onDelete={(c) => setDeleteTarget(c)}
-            actionLoadingId={actionLoadingId}
-            emptyMessage="No inflow commissions yet. Use Add to record commissions you get from others."
-          />
+          {activeInnerTab === "commissions" ? (
+            <>
+              <CommissionListCard
+                title="Outflow cash (you pay)"
+                commissions={outflowItems}
+                onAdd={() => openAdd("outflow")}
+                onEdit={openEdit}
+                onDelete={(c) => setDeleteTarget(c)}
+                actionLoadingId={actionLoadingId}
+                emptyMessage="No outflow commissions yet. Use Add to record what you pay to others."
+              />
+              <CommissionListCard
+                title="Inflow cash (you receive)"
+                commissions={inflowItems}
+                onAdd={() => openAdd("inflow")}
+                onEdit={openEdit}
+                onDelete={(c) => setDeleteTarget(c)}
+                actionLoadingId={actionLoadingId}
+                emptyMessage="No inflow commissions yet. Use Add to record commissions you get from others."
+              />
+            </>
+          ) : (
+            <LabourListCard
+              entries={labourItems}
+              onAdd={() => {
+                setEditingLabour(null);
+                setLabourModalOpen(true);
+              }}
+              onEdit={(entry) => {
+                setEditingLabour(entry);
+                setLabourModalOpen(true);
+              }}
+              onDelete={(entry) => setDeleteLabourTarget(entry)}
+              actionLoadingId={actionLoadingId}
+            />
+          )}
         </>
       )}
 
@@ -361,6 +477,32 @@ export default function LeadCommissionsTab({ lead }) {
           }}
         />
       )}
+
+      {deleteLabourTarget && (
+        <ConfirmDeleteModal
+          title="Delete labour entry"
+          message="Are you sure you want to delete this labour row?"
+          loading={actionLoadingId === deleteLabourTarget._id}
+          onCancel={() => setDeleteLabourTarget(null)}
+          onConfirm={async () => {
+            await handleDeleteLabour(deleteLabourTarget);
+            setDeleteLabourTarget(null);
+          }}
+        />
+      )}
+
+      <LabourModal
+        isOpen={labourModalOpen}
+        onClose={() => {
+          if (!labourSubmitting) {
+            setLabourModalOpen(false);
+            setEditingLabour(null);
+          }
+        }}
+        onSubmit={handleLabourSubmit}
+        submitting={labourSubmitting}
+        initialLabour={editingLabour}
+      />
 
       <VendorModal
         isOpen={vendorModalOpen}

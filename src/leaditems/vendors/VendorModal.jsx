@@ -14,10 +14,13 @@ const overlayStyle = {
 const modalStyle = {
   background: "white",
   borderRadius: 16,
-  padding: 24,
-  maxWidth: 420,
+  padding: 14,
+  maxWidth: 760,
   width: "100%",
+  maxHeight: "92vh",
+  overflowY: "auto",
   boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+  border: "1px solid #ece9e4",
 };
 
 const labelStyle = {
@@ -52,19 +55,53 @@ const btnBase = {
 };
 
 export default function VendorModal({ isOpen, onClose, onSubmit, submitting }) {
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [notes, setNotes] = useState("");
+  const [form, setForm] = useState({
+    vendorType: "",
+    paymentCategory: "cash",
+    companyName: "",
+    vendorName: "",
+    legalCategory: "individual",
+    address: "",
+    gst: "",
+    pan: "",
+    aadhar: "",
+    msmedNo: "",
+    bankName: "",
+    beneficiaryName: "",
+    bankPincode: "",
+    accountNumber: "",
+    ifscCode: "",
+    branch: "",
+    contact: "",
+    phone: "",
+    alternatePhone: "",
+    email: "",
+  });
 
   useEffect(() => {
     if (!isOpen) return;
-    setName("");
-    setCategory("");
-    setPhone("");
-    setEmail("");
-    setNotes("");
+    setForm({
+      vendorType: "",
+      paymentCategory: "cash",
+      companyName: "",
+      vendorName: "",
+      legalCategory: "individual",
+      address: "",
+      gst: "",
+      pan: "",
+      aadhar: "",
+      msmedNo: "",
+      bankName: "",
+      beneficiaryName: "",
+      bankPincode: "",
+      accountNumber: "",
+      ifscCode: "",
+      branch: "",
+      contact: "",
+      phone: "",
+      alternatePhone: "",
+      email: "",
+    });
   }, [isOpen]);
 
   const handleClose = () => {
@@ -75,19 +112,36 @@ export default function VendorModal({ isOpen, onClose, onSubmit, submitting }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!form.vendorName.trim() || !form.vendorType.trim()) return;
     onSubmit({
-      name: name.trim(),
-      category: category.trim() || undefined,
-      phone: phone.trim() || undefined,
-      email: email.trim() || undefined,
-      notes: notes.trim() || undefined,
+      name: form.vendorName.trim(),
+      vendorType: form.vendorType.trim(),
+      paymentCategory: form.paymentCategory,
+      companyName: form.companyName.trim() || undefined,
+      legalCategory: form.legalCategory,
+      address: form.address.trim() || undefined,
+      gst: form.gst.trim().toUpperCase() || undefined,
+      pan: form.pan.trim().toUpperCase() || undefined,
+      aadhar: form.aadhar.trim() || undefined,
+      msmedNo: form.msmedNo.trim() || undefined,
+      contact: form.contact.trim() || undefined,
+      phone: form.phone.trim() || undefined,
+      alternatePhone: form.alternatePhone.trim() || undefined,
+      email: form.email.trim() || undefined,
+      bankDetails: {
+        bankName: form.bankName.trim() || undefined,
+        beneficiaryName: form.beneficiaryName.trim() || undefined,
+        bankPincode: form.bankPincode.trim() || undefined,
+        accountNumber: form.accountNumber.trim() || undefined,
+        ifscCode: form.ifscCode.trim().toUpperCase() || undefined,
+        branch: form.branch.trim() || undefined,
+      },
     });
   };
 
   if (!isOpen) return null;
 
-  const canSubmit = Boolean(name.trim());
+  const canSubmit = Boolean(form.vendorName.trim() && form.vendorType.trim());
 
   return (
     <div
@@ -104,65 +158,44 @@ export default function VendorModal({ isOpen, onClose, onSubmit, submitting }) {
             marginBottom: 12,
           }}
         >
-          Add vendor
+          Add Vendor
         </div>
-        <p
-          style={{
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: 13,
-            color: "#6b6966",
-            margin: "0 0 16px 0",
-          }}
-        >
-          Only name is required. Other details are optional and can help you
-          remember who this vendor is.
-        </p>
         <form onSubmit={handleSubmit}>
-          <label style={labelStyle}>Name *</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Photographer Raj"
-            style={{ ...inputStyle, marginBottom: 10 }}
-            required
-          />
-
-          <label style={labelStyle}>Category</label>
-          <input
-            type="text"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="photography / decor / catering"
-            style={{ ...inputStyle, marginBottom: 10 }}
-          />
-
-          <label style={labelStyle}>Phone</label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+919876543210"
-            style={{ ...inputStyle, marginBottom: 10 }}
-          />
-
-          <label style={labelStyle}>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="raj@example.com"
-            style={{ ...inputStyle, marginBottom: 10 }}
-          />
-
-          <label style={labelStyle}>Notes</label>
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Specializes in candid weddings"
-            style={{ ...inputStyle, marginBottom: 18 }}
-          />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+            <Field label="Vendor Type *"><input value={form.vendorType} onChange={(e) => setForm((p) => ({ ...p, vendorType: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Specify Category *">
+              <select value={form.paymentCategory} onChange={(e) => setForm((p) => ({ ...p, paymentCategory: e.target.value }))} style={inputStyle}>
+                <option value="cash">Cash</option>
+                <option value="account_cash">Account Cash</option>
+                <option value="account">Account</option>
+              </select>
+            </Field>
+            <Field label="Company Name"><input value={form.companyName} onChange={(e) => setForm((p) => ({ ...p, companyName: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Vendor Name *"><input value={form.vendorName} onChange={(e) => setForm((p) => ({ ...p, vendorName: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Category *">
+              <select value={form.legalCategory} onChange={(e) => setForm((p) => ({ ...p, legalCategory: e.target.value }))} style={inputStyle}>
+                <option value="individual">Individual</option>
+                <option value="huf">HUF</option>
+                <option value="firm">Firm</option>
+                <option value="company">Company</option>
+              </select>
+            </Field>
+            <Field label="Contact Name"><input value={form.contact} onChange={(e) => setForm((p) => ({ ...p, contact: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Phone Number"><input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Alternate Phone Number"><input value={form.alternatePhone} onChange={(e) => setForm((p) => ({ ...p, alternatePhone: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Email ID"><input type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Address" full><textarea value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} /></Field>
+            <Field label="GST"><input value={form.gst} onChange={(e) => setForm((p) => ({ ...p, gst: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="PAN"><input value={form.pan} onChange={(e) => setForm((p) => ({ ...p, pan: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="AADHAR"><input value={form.aadhar} onChange={(e) => setForm((p) => ({ ...p, aadhar: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="MSMED No"><input value={form.msmedNo} onChange={(e) => setForm((p) => ({ ...p, msmedNo: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Bank Name"><input value={form.bankName} onChange={(e) => setForm((p) => ({ ...p, bankName: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Beneficiary Name / Company Name"><input value={form.beneficiaryName} onChange={(e) => setForm((p) => ({ ...p, beneficiaryName: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Bank PIN Code"><input value={form.bankPincode} onChange={(e) => setForm((p) => ({ ...p, bankPincode: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Account Number"><input value={form.accountNumber} onChange={(e) => setForm((p) => ({ ...p, accountNumber: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="IFSC Code"><input value={form.ifscCode} onChange={(e) => setForm((p) => ({ ...p, ifscCode: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Branch"><input value={form.branch} onChange={(e) => setForm((p) => ({ ...p, branch: e.target.value }))} style={inputStyle} /></Field>
+          </div>
 
           <div
             style={{
@@ -190,6 +223,15 @@ export default function VendorModal({ isOpen, onClose, onSubmit, submitting }) {
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function Field({ label, children, full = false }) {
+  return (
+    <div style={{ minWidth: 0, gridColumn: full ? "1 / -1" : "auto" }}>
+      <label style={labelStyle}>{label}</label>
+      {children}
     </div>
   );
 }

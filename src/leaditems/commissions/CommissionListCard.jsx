@@ -203,6 +203,7 @@ export default function CommissionListCard({
               >
                 {formatINR(c.amount ?? 0)} • {methodLabel(c.method)} •{" "}
                 {formatDate(c.givenDate)}
+                {c.gstIncluded ? ` • incl. GST ${Number(c.gstRate || 18)}%` : ""}
               </div>
             </div>
             <div

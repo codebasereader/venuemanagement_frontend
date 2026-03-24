@@ -16,10 +16,15 @@ const titleStyle = {
   marginBottom: 10,
 };
 
-export default function CommissionPieCard({ outflowTotal = 0, inflowTotal = 0 }) {
+export default function CommissionPieCard({
+  outflowTotal = 0,
+  inflowTotal = 0,
+  labourTotal = 0,
+}) {
   const outflow = Number(outflowTotal) || 0;
   const inflow = Number(inflowTotal) || 0;
-  const total = outflow + inflow;
+  const labour = Number(labourTotal) || 0;
+  const total = outflow + inflow + labour;
 
   const outflowPercent = total > 0 ? (outflow / total) * 100 : 0;
   const inflowPercent = total > 0 ? (inflow / total) * 100 : 0;
@@ -28,7 +33,7 @@ export default function CommissionPieCard({ outflowTotal = 0, inflowTotal = 0 })
   const gradient =
     total === 0
       ? "#f0ede8"
-      : `conic-gradient(#d9534f 0 ${outflowPercent}%, #4caf50 ${outflowPercent}% 100%)`;
+      : `conic-gradient(#d9534f 0 ${outflowPercent}%, #4caf50 ${outflowPercent}% ${outflowPercent + inflowPercent}%, #f59e0b ${outflowPercent + inflowPercent}% 100%)`;
 
   return (
     <div style={cardStyle}>
@@ -72,7 +77,7 @@ export default function CommissionPieCard({ outflowTotal = 0, inflowTotal = 0 })
               boxSizing: "border-box",
             }}
           >
-            {total === 0 ? "No data" : `Net ${formatINR(inflow - outflow)}`}
+            {total === 0 ? "No data" : `Net ${formatINR(inflow - outflow - labour)}`}
           </div>
         </div>
 
@@ -131,6 +136,38 @@ export default function CommissionPieCard({ outflowTotal = 0, inflowTotal = 0 })
             <span style={{ color: "#1a1917", fontWeight: 800 }}>
               {formatINR(inflow)}{" "}
               {total > 0 && `(${inflowPercent.toFixed(0)}%)`}
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 999,
+                background: "#f59e0b",
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ color: "#6b6966", fontWeight: 700 }}>
+              Labours:
+            </span>
+            <span style={{ color: "#1a1917", fontWeight: 800 }}>
+              {formatINR(labour)}{" "}
+              {total > 0 && `(${((labour / total) * 100).toFixed(0)}%)`}
+            </span>
+          </div>
+
+          <div style={{ color: "#6b6966", fontWeight: 700 }}>
+            Overall total:{" "}
+            <span style={{ color: "#1a1917", fontWeight: 900 }}>
+              {formatINR(total)}
             </span>
           </div>
         </div>

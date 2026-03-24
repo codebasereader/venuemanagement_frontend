@@ -123,6 +123,71 @@ function SummaryRow({ label, value, strong }) {
   );
 }
 
+function AddonRow({ addon, idx, durationHours, setAddons }) {
+  const unit = moneyToNumber(addon?.prices?.[String(durationHours)] ?? 0);
+  const qty = Math.max(0, Number(addon.quantity) || 0);
+  const lineTotal = unit * qty;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "24px 1fr auto", gap: 10, alignItems: "center" }}>
+      <input
+        type="checkbox"
+        checked={Boolean(addon.selected)}
+        onChange={(e) => setAddons((prev) => prev.map((x, pIdx) => (pIdx === idx ? { ...x, selected: e.target.checked } : x)))}
+      />
+      <div>
+        <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 800, color: "#1a1917", fontSize: 13 }}>
+          {addon.name}
+        </div>
+        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#6b6966", fontWeight: 700 }}>
+          {unit ? `${formatINR(unit)} (+18% GST)` : "—"}
+        </div>
+        {addon.selected && unit > 0 && (
+          <div style={{ marginTop: 4, fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#1a1917", fontWeight: 700 }}>
+            {formatINR(unit)} × {qty} = {formatINR(lineTotal)}
+          </div>
+        )}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button
+          type="button"
+          disabled={!addon.selected}
+          onClick={() => setAddons((prev) => prev.map((x, pIdx) => (pIdx === idx ? { ...x, quantity: Math.max(0, (Number(x.quantity) || 0) - 1) } : x)))}
+          style={{ ...btnBase, width: 28, height: 28, padding: 0, borderRadius: 8, background: "#f0ede8", color: "#1a1917", opacity: addon.selected ? 1 : 0.5 }}
+        >
+          −
+        </button>
+        <input
+          type="number"
+          min={0}
+          disabled={!addon.selected}
+          value={String(addon.quantity ?? 0)}
+          onChange={(e) => {
+            const v = Math.max(0, Number(e.target.value) || 0);
+            setAddons((prev) => prev.map((x, pIdx) => (pIdx === idx ? { ...x, quantity: v } : x)));
+          }}
+          style={{ ...inputStyle, width: 52, padding: "6px 8px", textAlign: "center", opacity: addon.selected ? 1 : 0.6 }}
+        />
+        <button
+          type="button"
+          disabled={!addon.selected}
+          onClick={() => setAddons((prev) => prev.map((x, pIdx) => (pIdx === idx ? { ...x, quantity: (Number(x.quantity) || 0) + 1 } : x)))}
+          style={{ ...btnBase, width: 28, height: 28, padding: 0, borderRadius: 8, background: "#f0ede8", color: "#1a1917", opacity: addon.selected ? 1 : 0.5 }}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const QUOTE_STEPS = [
+  "Event Window",
+  "Venue Booking",
+  "Pricing",
+  "Add-ons",
+  "Final Review",
+];
+
 function buildQuotePayload({
   lead,
   venueId,
@@ -134,6 +199,7 @@ function buildQuotePayload({
   basePrice,
   inclusions,
   addons,
+  maintenanceCharge,
   totals,
   status = "draft",
 }) {
@@ -161,13 +227,19 @@ function buildQuotePayload({
           quantity: Number(a.quantity) || 0,
           unitPrice: moneyToNumber(a?.prices?.[String(durationHours)] ?? 0),
         })),
+      maintenanceCharge: moneyToNumber(maintenanceCharge),
       gstRate: 0.18,
       discount: totals?.discount ?? 0,
       totals: {
         venueBase: totals?.venueBase,
+        venueNet: totals?.venueNet,
         venueGst: totals?.venueGst,
+        venueTotal: totals?.venueTotal,
+        maintenanceCharge: totals?.maintenanceCharge,
+        selectedAddonTotal: totals?.selectedAddonTotal,
         addonTotal: totals?.addonTotal,
         addonGst: totals?.addonGst,
+        addonsTotalWithGst: totals?.addonsTotalWithGst,
         subtotal: totals?.subtotal,
         discount: totals?.discount,
         total: totals?.total,
@@ -207,6 +279,8 @@ function quoteToFormState(editQuote) {
     basePrice: moneyToNumber(pr.basePrice) || 0,
     inclusions,
     addons,
+    maintenanceCharge:
+      moneyToNumber(pr.maintenanceCharge ?? pr.totals?.maintenanceCharge) || 0,
     discount: moneyToNumber(pr.discount) || 0,
   };
 }
@@ -234,6 +308,7 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
   const [basePrice, setBasePrice] = useState(0);
   const [inclusions, setInclusions] = useState([]);
   const [addons, setAddons] = useState([]);
+  const [maintenanceCharge, setMaintenanceCharge] = useState(0);
   const [discount, setDiscount] = useState(0);
 
   const pricingFlags = useMemo(() => {
@@ -276,11 +351,19 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
   }, [startAtISO, endAtISO]);
 
   const totals = useMemo(
-    () => computeTotals({ basePrice, addons, durationHours, discount }),
-    [basePrice, addons, durationHours, discount],
+    () =>
+      computeTotals({
+        basePrice,
+        addons,
+        maintenanceCharge,
+        durationHours,
+        discount,
+      }),
+    [basePrice, addons, maintenanceCharge, durationHours, discount],
   );
 
-  const modalTitle = isEdit ? `Edit Quote - Step ${step + 1}/4` : `Create Quote - Step ${step + 1}/4`;
+  const LAST_STEP = 4;
+  const modalTitle = isEdit ? `Edit Quote - Step ${step + 1}/5` : `Create Quote - Step ${step + 1}/5`;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -299,12 +382,14 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
       setBasePrice(fromEdit.basePrice);
       setInclusions(fromEdit.inclusions);
       setAddons(fromEdit.addons);
+      setMaintenanceCharge(fromEdit.maintenanceCharge);
       setDiscount(fromEdit.discount);
       return;
     }
 
     setBookingType("");
     setSpaceId("");
+    setMaintenanceCharge(0);
     setDiscount(0);
 
     const leadStart = lead?.specialDay?.startAt ? new Date(lead.specialDay.startAt) : null;
@@ -400,7 +485,7 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
       if (!bookingType) return;
       if (bookingType === "space_buyout" && !spaceId) return;
     }
-    setStep((s) => Math.min(3, s + 1));
+    setStep((s) => Math.min(LAST_STEP, s + 1));
   };
 
   const goBack = () => setStep((s) => Math.max(0, s - 1));
@@ -419,6 +504,7 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
       basePrice,
       inclusions,
       addons,
+      maintenanceCharge,
       totals,
       status,
     });
@@ -457,19 +543,15 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
     const name = lead?.contact?.name || "Customer";
     const eventStr = startAtLocal && endAtLocal ? `${startAtLocal.replace("T", " ")} – ${endAtLocal.replace("T", " ")} (${durationHours}h)` : "—";
     const spaceStr = bookingType === "venue_buyout" ? "Full Venue Buyout" : (spaces.find((s) => s.id === spaceId)?.name || "—");
-    const addonsStr =
-      (addons || []).filter((a) => a.selected).length > 0
-        ? (addons || []).filter((a) => a.selected).map((a) => `${a.name} ×${a.quantity || 0}`).join(", ")
-        : "None";
     const text = [
       `Quote for ${name}`,
       `Event: ${eventStr}`,
       `Spaces: ${spaceStr}`,
-      `Add-ons: ${addonsStr}`,
-      `Venue + GST: ${formatINR(totals.venueBase + totals.venueGst)}`,
-      `Add-ons + GST: ${formatINR(totals.addonTotal + totals.addonGst)}`,
-      totals.discount > 0 ? `Discount: −${formatINR(totals.discount)}` : null,
-      `TOTAL: ${formatINR(totals.total)}`,
+      `Venue Rental: ${formatINR(totals.venueBase)}`,
+      totals.discount > 0 ? `Discount: −${formatINR(totals.discount)}` : `Discount: ${formatINR(0)}`,
+      `Net Amount: ${formatINR(totals.venueNet)}`,
+      `GST (18%): ${formatINR(totals.venueGst)}`,
+      `TOTAL (Venue only): ${formatINR(totals.venueTotal)}`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -538,6 +620,29 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
         </div>
 
         <div style={{ padding: "0 18px 18px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+            {QUOTE_STEPS.map((title, idx) => {
+              const active = idx === step;
+              const done = idx < step;
+              return (
+                <span
+                  key={title}
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    border: `1px solid ${active ? "#1a1917" : "#e8e6e2"}`,
+                    background: active ? "#1a1917" : done ? "#f0ede8" : "#faf9f7",
+                    color: active ? "#fff" : "#1a1917",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  {idx + 1}. {title}
+                </span>
+              );
+            })}
+          </div>
           {loadingPricing && (
             <div style={{ padding: 14, borderRadius: 14, background: "#faf9f7", border: "1px dashed #e8e6e2", color: "#6b6966", fontWeight: 800 }}>
               Loading pricing…
@@ -713,81 +818,8 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
                   </div>
                 )}
 
-                <div style={{ marginTop: 14 }}>
-                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 900, color: "#1a1917", fontSize: 12, letterSpacing: "0.06em" }}>
-                    ADD-ONS
-                  </div>
-                  <div style={{ marginTop: 8, display: "grid", gap: 10 }}>
-                    {(addons || []).length === 0 && (
-                      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#6b6966", fontWeight: 700 }}>
-                        No add-ons configured for this pricing.
-                      </div>
-                    )}
-                    {(addons || []).map((a, idx) => {
-                      const unit = moneyToNumber(a?.prices?.[String(durationHours)] ?? 0);
-                      const qty = Math.max(0, Number(a.quantity) || 0);
-                      const lineTotal = unit * qty;
-                      return (
-                        <div key={`${a.name}-${idx}`} style={{ display: "grid", gridTemplateColumns: "24px 1fr auto", gap: 10, alignItems: "center" }}>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(a.selected)}
-                            onChange={(e) => setAddons((prev) => prev.map((x, pIdx) => (pIdx === idx ? { ...x, selected: e.target.checked } : x)))}
-                          />
-                          <div>
-                            <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 800, color: "#1a1917", fontSize: 13 }}>
-                              {a.name}
-                            </div>
-                            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#6b6966", fontWeight: 700 }}>
-                              {unit ? `${formatINR(unit)} (+18% GST)` : "—"}
-                            </div>
-                            {a.selected && unit > 0 && (
-                              <div style={{ marginTop: 4, fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#1a1917", fontWeight: 700 }}>
-                                {formatINR(unit)} × {qty} = {formatINR(lineTotal)}
-                              </div>
-                            )}
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <button
-                              type="button"
-                              disabled={!a.selected}
-                              onClick={() => setAddons((prev) => prev.map((x, pIdx) => (pIdx === idx ? { ...x, quantity: Math.max(0, (Number(x.quantity) || 0) - 1) } : x)))}
-                              style={{ ...btnBase, width: 28, height: 28, padding: 0, borderRadius: 8, background: "#f0ede8", color: "#1a1917", opacity: a.selected ? 1 : 0.5 }}
-                            >
-                              −
-                            </button>
-                            <input
-                              type="number"
-                              min={0}
-                              disabled={!a.selected}
-                              value={String(a.quantity ?? 0)}
-                              onChange={(e) => {
-                                const v = Math.max(0, Number(e.target.value) || 0);
-                                setAddons((prev) => prev.map((x, pIdx) => (pIdx === idx ? { ...x, quantity: v } : x)));
-                              }}
-                              style={{ ...inputStyle, width: 52, padding: "6px 8px", textAlign: "center", opacity: a.selected ? 1 : 0.6 }}
-                            />
-                            <button
-                              type="button"
-                              disabled={!a.selected}
-                              onClick={() => setAddons((prev) => prev.map((x, pIdx) => (pIdx === idx ? { ...x, quantity: (Number(x.quantity) || 0) + 1 } : x)))}
-                              style={{ ...btnBase, width: 28, height: 28, padding: 0, borderRadius: 8, background: "#f0ede8", color: "#1a1917", opacity: a.selected ? 1 : 0.5 }}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 <div style={{ marginTop: 14, borderTop: "1px solid #f1f0ee", paddingTop: 10 }}>
                   <SummaryRow label="Venue Rental" value={formatINR(totals.venueBase)} />
-                  <SummaryRow label="GST (18%)" value={formatINR(totals.venueGst)} />
-                  <SummaryRow label="Add-ons" value={formatINR(totals.addonTotal)} />
-                  <SummaryRow label="Add-ons GST" value={formatINR(totals.addonGst)} />
-                  <SummaryRow label="Subtotal" value={formatINR(totals.subtotal)} />
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, padding: "10px 0" }}>
                     <div style={{ color: "#6b6966", fontSize: 13, fontWeight: 800, fontFamily: "'DM Sans', sans-serif" }}>
                       Discount
@@ -805,8 +837,10 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
                       />
                     </div>
                   </div>
+                  <SummaryRow label="Net Amount" value={formatINR(totals.venueNet)} />
+                  <SummaryRow label="GST (18%)" value={formatINR(totals.venueGst)} />
                   <div style={{ borderTop: "1px solid #f1f0ee", marginTop: 8 }} />
-                  <SummaryRow label="TOTAL" value={formatINR(totals.total)} strong />
+                  <SummaryRow label="TOTAL" value={formatINR(totals.venueTotal)} strong />
                 </div>
               </div>
             </>
@@ -815,7 +849,50 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
           {step === 3 && (
             <>
               <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 900, color: "#1a1917", marginBottom: 12 }}>
-                Review Quote
+                Add-ons
+              </div>
+
+              <div style={{ background: "white", borderRadius: 16, border: "1px solid #ece9e4", padding: 14 }}>
+                <div style={{ marginTop: 8, display: "grid", gap: 10 }}>
+                  {(addons || []).length === 0 && (
+                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#6b6966", fontWeight: 700 }}>
+                      No add-ons configured for this pricing.
+                    </div>
+                  )}
+                  {(addons || []).map((a, idx) => (
+                    <AddonRow key={`${a.name}-${idx}`} addon={a} idx={idx} durationHours={durationHours} setAddons={setAddons} />
+                  ))}
+                </div>
+
+                <div style={{ marginTop: 14 }}>
+                  <label style={labelStyle}>Maintenance Charges</label>
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={maintenanceCharge === 0 ? "" : String(maintenanceCharge)}
+                    onChange={(e) => setMaintenanceCharge(moneyToNumber(e.target.value))}
+                    placeholder="Enter amount"
+                    style={{ ...inputStyle, textAlign: "right" }}
+                  />
+                </div>
+
+                <div style={{ marginTop: 14, borderTop: "1px solid #f1f0ee", paddingTop: 10 }}>
+                  <SummaryRow label="Selected Add-ons" value={formatINR(totals.selectedAddonTotal)} />
+                  <SummaryRow label="Maintenance Charges" value={formatINR(totals.maintenanceCharge)} />
+                  <SummaryRow label="Add-ons (Before GST)" value={formatINR(totals.addonTotal)} />
+                  <SummaryRow label="GST (18%)" value={formatINR(totals.addonGst)} />
+                  <div style={{ borderTop: "1px solid #f1f0ee", marginTop: 8 }} />
+                  <SummaryRow label="TOTAL" value={formatINR(totals.addonsTotalWithGst)} strong />
+                </div>
+              </div>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 900, color: "#1a1917", marginBottom: 12 }}>
+                Final Review
               </div>
 
               <div style={{ background: "white", borderRadius: 16, border: "1px solid #ece9e4", padding: 14 }}>
@@ -834,13 +911,13 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
                     ? (addons || []).filter((a) => a.selected).map((a) => `${a.name} ×${a.quantity || 0}`).join(", ")
                     : "—"}
                 </div>
+                <div style={{ marginTop: 8, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#6b6966", fontWeight: 800 }}>
+                  Maintenance Charges: {formatINR(totals.maintenanceCharge)}
+                </div>
 
                 <div style={{ marginTop: 12, borderTop: "1px solid #f1f0ee", paddingTop: 10 }}>
-                  <SummaryRow label="Venue + GST" value={formatINR(totals.venueBase + totals.venueGst)} />
-                  <SummaryRow label="Add-ons + GST" value={formatINR(totals.addonTotal + totals.addonGst)} />
-                  {totals.discount > 0 && (
-                    <SummaryRow label="Discount" value={`−${formatINR(totals.discount)}`} />
-                  )}
+                  <SummaryRow label="Venue Total" value={formatINR(totals.venueTotal)} />
+                  <SummaryRow label="Add-ons Total" value={formatINR(totals.addonsTotalWithGst)} />
                   <div style={{ borderTop: "1px solid #f1f0ee", marginTop: 8 }} />
                   <SummaryRow label="TOTAL" value={formatINR(totals.total)} strong />
                 </div>
@@ -862,7 +939,7 @@ export default function CreateQuoteModal({ isOpen, onClose, lead, onCreate, onUp
               {step === 0 ? "Cancel" : "< Back"}
             </button>
 
-            {step < 3 ? (
+            {step < LAST_STEP ? (
               <button
                 type="button"
                 onClick={goNext}
