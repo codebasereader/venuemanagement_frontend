@@ -7,14 +7,32 @@ import { ROLES } from "../../config";
 // ── Icons ──────────────────────────────────────────────────────────────────
 
 const HomeIcon = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
     <polyline points="9 22 9 12 15 12 15 22" />
   </svg>
 );
 
 const LeadsIcon = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
     <circle cx="9" cy="7" r="4" />
     <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -23,7 +41,16 @@ const LeadsIcon = ({ size = 20 }) => (
 );
 
 const CalendarIcon = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
     <line x1="16" y1="2" x2="16" y2="6" />
     <line x1="8" y1="2" x2="8" y2="6" />
@@ -32,7 +59,16 @@ const CalendarIcon = ({ size = 20 }) => (
 );
 
 const VendorsIcon = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M3 21h18" />
     <path d="M5 21V7l7-4 7 4v14" />
     <path d="M9 9h.01" />
@@ -42,20 +78,47 @@ const VendorsIcon = ({ size = 20 }) => (
 );
 
 const ProfileIcon = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
   </svg>
 );
 
 const ChevronLeftIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polyline points="15 18 9 12 15 6" />
   </svg>
 );
 
 const LogoutIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
     <polyline points="16 17 21 12 16 7" />
     <line x1="21" y1="12" x2="9" y2="12" />
@@ -63,7 +126,16 @@ const LogoutIcon = ({ size = 14 }) => (
 );
 
 const UsersIcon = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
     <circle cx="9" cy="7" r="4" />
     <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -72,9 +144,53 @@ const UsersIcon = ({ size = 20 }) => (
 );
 
 const VenuesIcon = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
     <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+);
+
+const DaybookIcon = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="3" y1="9" x2="21" y2="9" />
+    <line x1="9" y1="14" x2="9" y2="19" />
+    <line x1="15" y1="14" x2="15" y2="19" />
+  </svg>
+);
+
+const TargetIcon = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="6" />
+    <circle cx="12" cy="12" r="2" />
   </svg>
 );
 
@@ -92,6 +208,16 @@ const adminNavItems = [
   { path: "/venues", label: "View Venues", icon: VenuesIcon, end: false },
   { path: "/users", label: "View Users", icon: UsersIcon, end: false },
   { path: "/calendar", label: "Calendar", icon: CalendarIcon, end: false },
+];
+
+const ownerNavItems = [
+  { path: "/", label: "Home", icon: HomeIcon, end: true },
+  { path: "/leads", label: "Leads", icon: LeadsIcon },
+  { path: "/vendors", label: "Vendor's List", icon: VendorsIcon },
+  { path: "/calendar", label: "Calendar", icon: CalendarIcon },
+  { path: "/daybook", label: "Daybook", icon: DaybookIcon },
+  { path: "/target", label: "Target", icon: TargetIcon },
+  { path: "/profile", label: "Profile", icon: ProfileIcon },
 ];
 
 // ── Avatar ─────────────────────────────────────────────────────────────────
@@ -170,8 +296,18 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const { name, role, access_token } = useSelector((state) => state.user.value);
 
-  const navItems = role === ROLES.ADMIN ? adminNavItems : inchargeNavItems;
-  const roleLabel = role === ROLES.ADMIN ? "Admin" : "Venue Incharge";
+  const navItems =
+    role === ROLES.ADMIN
+      ? adminNavItems
+      : role === ROLES.OWNER
+        ? ownerNavItems
+        : inchargeNavItems;
+  const roleLabel =
+    role === ROLES.ADMIN
+      ? "Admin"
+      : role === ROLES.OWNER
+        ? "Owner"
+        : "Venue Incharge";
 
   const handleLogout = () => {
     dispatch(logout());
@@ -192,7 +328,6 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#f5f4f1]">
-
       {/* ══ DESKTOP SIDEBAR ══ */}
       {!isMobile && (
         <aside
@@ -209,19 +344,24 @@ export default function DashboardLayout() {
             <div className="flex items-center gap-2">
               <div
                 className="w-7 h-7 rounded-[8px] shrink-0"
-                style={{ background: "linear-gradient(135deg, #7c6fcd, #5ab99c)" }}
+                style={{
+                  background: "linear-gradient(135deg, #7c6fcd, #5ab99c)",
+                }}
               />
               {!collapsed && (
                 <span className="text-[15px] font-bold text-[#1a1917] font-serif tracking-[-0.01em]">
-                  {role === ROLES.ADMIN ? "Admin" : "Venue Management"}
+                  Venue Management
                 </span>
               )}
             </div>
             <button
-              onClick={() => setCollapsed(c => !c)}
+              onClick={() => setCollapsed((c) => !c)}
               title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               className="flex items-center justify-center w-7 h-7 rounded-[8px] border border-[#e8e6e2] bg-white text-[#6b6966] shrink-0 cursor-pointer transition-colors duration-150 hover:bg-[#f0ede8]"
-              style={{ transform: collapsed ? "rotate(180deg)" : "none", transition: "background 0.15s, transform 0.25s" }}
+              style={{
+                transform: collapsed ? "rotate(180deg)" : "none",
+                transition: "background 0.15s, transform 0.25s",
+              }}
             >
               <ChevronLeftIcon />
             </button>
@@ -247,8 +387,12 @@ export default function DashboardLayout() {
               <div className="flex items-center gap-2.5 p-3 rounded-xl bg-[#f0ede8]">
                 <Avatar name={name} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-[#1a1917] truncate">{name || "User"}</div>
-                  <div className="text-[11px] text-[#9a9896] truncate">{roleLabel}</div>
+                  <div className="text-xs font-semibold text-[#1a1917] truncate">
+                    {name || "User"}
+                  </div>
+                  <div className="text-[11px] text-[#9a9896] truncate">
+                    {roleLabel}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -270,7 +414,6 @@ export default function DashboardLayout() {
 
       {/* ══ MAIN CONTENT ══ */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-
         {/* Top bar */}
         <header className="h-[60px] bg-[#faf9f7] border-b border-[#ece9e4] flex items-center justify-between px-6 shrink-0">
           {isMobile ? (
@@ -313,11 +456,16 @@ export default function DashboardLayout() {
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           {navItems.map(({ path, label, icon, end }) => (
-            <BottomNavItem key={path} path={path} label={label} icon={icon} end={end} />
+            <BottomNavItem
+              key={path}
+              path={path}
+              label={label}
+              icon={icon}
+              end={end}
+            />
           ))}
         </nav>
       )}
-
     </div>
   );
 }

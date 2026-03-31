@@ -17,11 +17,14 @@ import { ROLES } from "../config";
 import CalendarMonthly from "./pages/CalendarMonthly.jsx";
 import Vendorslist from "./pages/Vendorslist.jsx";
 import VendorDetailsPage from "./pages/VendorDetailsPage.jsx";
+import Daybookhome from "./pages/daybook/Daybookhome.jsx";
+import TargetHome from "./pages/target/TargetHome.jsx";
 
 function LoginGuard() {
   const { is_logged_in, role } = useSelector((state) => state.user.value);
   if (is_logged_in) {
-    if (role === ROLES.INCHARGE) return <Navigate to="/" replace />;
+    if (role === ROLES.INCHARGE || role === ROLES.OWNER)
+      return <Navigate to="/" replace />;
     if (role === ROLES.ADMIN) return <Navigate to="/users" replace />;
   }
   return <LoginPage />;
@@ -61,6 +64,8 @@ export default function App() {
           <Route path="users" element={<ViewUsers />} />
           <Route path="venues" element={<ViewVenues />} />
           <Route path="calendar" element={<Calendar />} />
+          <Route path="daybook" element={<Daybookhome />} />
+          <Route path="target" element={<TargetHome />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Route>

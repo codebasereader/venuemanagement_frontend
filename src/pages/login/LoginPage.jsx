@@ -39,6 +39,8 @@ const LoginPage = () => {
         navigate("/");
       } else if (role === ROLES.ADMIN) {
         navigate("/users");
+      } else if (role === ROLES.OWNER) {
+        navigate("/");
       } else {
         setError("You do not have access to this app.");
       }

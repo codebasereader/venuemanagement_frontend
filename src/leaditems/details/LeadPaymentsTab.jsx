@@ -12,6 +12,7 @@ import {
   createPayment,
   updatePayment,
   deletePayment,
+  confirmAdvance,
 } from "../../api/payments.js";
 import ConfirmedQuoteCard from "../payments/ConfirmedQuoteCard.jsx";
 import PaymentProgressCard from "../payments/PaymentProgressCard.jsx";
@@ -69,7 +70,14 @@ function ConfirmDeleteModal({ title, message, loading, onCancel, onConfirm }) {
         >
           {message}
         </p>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            justifyContent: "flex-end",
+            flexWrap: "wrap",
+          }}
+        >
           <button
             type="button"
             onClick={onCancel}
@@ -115,7 +123,10 @@ function ConfirmDeleteModal({ title, message, loading, onCancel, onConfirm }) {
 }
 
 export default function LeadPaymentsTab({ lead }) {
-  const { access_token: token, venueId: reduxVenueId } = useSelector((state) => state.user.value);
+  const { access_token: token, venueId: reduxVenueId } = useSelector(
+    (state) => state.user.value,
+  );
+  const userRole = useSelector((state) => state.user.value?.role);
   const venueId = reduxVenueId || lead?.venueId;
   const leadId = lead?._id;
 
@@ -129,6 +140,7 @@ export default function LeadPaymentsTab({ lead }) {
   const [addReminderOpen, setAddReminderOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
   const [receivedReminder, setReceivedReminder] = useState(null);
+  const [receivedPayment, setReceivedPayment] = useState(null);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
@@ -141,7 +153,9 @@ export default function LeadPaymentsTab({ lead }) {
   const fetchQuotes = useCallback(async () => {
     if (!venueId || !leadId || !token) return;
     try {
-      const data = await listQuotesByLead(venueId, leadId, token, { confirmed: true });
+      const data = await listQuotesByLead(venueId, leadId, token, {
+        confirmed: true,
+      });
       const list = Array.isArray(data) ? data : [];
       setConfirmedQuotes(list);
       setSelectedQuoteId((prev) => {
@@ -162,7 +176,9 @@ export default function LeadPaymentsTab({ lead }) {
       setReminders(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(
-        err.response?.data?.error?.message || err.message || "Failed to load reminders.",
+        err.response?.data?.error?.message ||
+          err.message ||
+          "Failed to load reminders.",
       );
       setReminders([]);
     }
@@ -193,7 +209,8 @@ export default function LeadPaymentsTab({ lead }) {
     loadAll();
   }, [loadAll]);
 
-  const selectedQuote = confirmedQuotes.find((q) => q?._id === selectedQuoteId) || null;
+  const selectedQuote =
+    confirmedQuotes.find((q) => q?._id === selectedQuoteId) || null;
   const totalAmount = selectedQuote?.pricing?.totals?.total ?? 0;
 
   const filteredReminders = selectedQuoteId
@@ -224,12 +241,21 @@ export default function LeadPaymentsTab({ lead }) {
       setError("");
       try {
         if (editingReminder?._id) {
-          await updateReminder(venueId, leadId, editingReminder._id, payload, token);
+          await updateReminder(
+            venueId,
+            leadId,
+            editingReminder._id,
+            payload,
+            token,
+          );
         } else {
           await createReminder(
             venueId,
             leadId,
-            { ...payload, ...(selectedQuoteId ? { quoteId: selectedQuoteId } : {}) },
+            {
+              ...payload,
+              ...(selectedQuoteId ? { quoteId: selectedQuoteId } : {}),
+            },
             token,
           );
         }
@@ -238,7 +264,9 @@ export default function LeadPaymentsTab({ lead }) {
         await fetchReminders();
       } catch (err) {
         setError(
-          err.response?.data?.error?.message || err.message || "Failed to save reminder.",
+          err.response?.data?.error?.message ||
+            err.message ||
+            "Failed to save reminder.",
         );
       } finally {
         setReminderSubmitting(false);
@@ -257,7 +285,9 @@ export default function LeadPaymentsTab({ lead }) {
         await fetchReminders();
       } catch (err) {
         setError(
-          err.response?.data?.error?.message || err.message || "Failed to delete reminder.",
+          err.response?.data?.error?.message ||
+            err.message ||
+            "Failed to delete reminder.",
         );
       } finally {
         setActionLoadingId(null);
@@ -268,6 +298,10 @@ export default function LeadPaymentsTab({ lead }) {
 
   const handleReceivedClick = (reminder) => {
     setReceivedReminder(reminder);
+  };
+
+  const handleReceivedPaymentClick = (payment) => {
+    setReceivedPayment(payment);
   };
 
   const handleAddPayment = () => {
@@ -289,14 +323,19 @@ export default function LeadPaymentsTab({ lead }) {
         await createPayment(
           venueId,
           leadId,
-          { ...payload, ...(selectedQuoteId ? { quoteId: selectedQuoteId } : {}) },
+          {
+            ...payload,
+            ...(selectedQuoteId ? { quoteId: selectedQuoteId } : {}),
+          },
           token,
         );
         setReceivedReminder(null);
         await Promise.all([fetchPayments(), fetchReminders()]);
       } catch (err) {
         setError(
-          err.response?.data?.error?.message || err.message || "Failed to record payment.",
+          err.response?.data?.error?.message ||
+            err.message ||
+            "Failed to record payment.",
         );
       } finally {
         setReceivedSubmitting(false);
@@ -305,6 +344,33 @@ export default function LeadPaymentsTab({ lead }) {
     [venueId, leadId, token, fetchPayments, fetchReminders, selectedQuoteId],
   );
 
+  const handleReceivedPaymentConfirm = useCallback(async () => {
+    if (!token || !receivedPayment?._id) return;
+    setReceivedSubmitting(true);
+    setError("");
+    try {
+      // Extract eventId from lead or payment object
+      const eventId = receivedPayment?.eventId || lead?._id;
+      const advanceNumber = receivedPayment?._id;
+
+      if (!eventId) {
+        throw new Error("Event ID not found");
+      }
+
+      await confirmAdvance(eventId, advanceNumber, token);
+      setReceivedPayment(null);
+      await fetchPayments();
+    } catch (err) {
+      setError(
+        err.response?.data?.error?.message ||
+          err.message ||
+          "Failed to confirm advance payment.",
+      );
+    } finally {
+      setReceivedSubmitting(false);
+    }
+  }, [token, receivedPayment, lead, fetchPayments]);
+
   const handlePaymentSubmit = useCallback(
     async (payload) => {
       if (!venueId || !leadId || !token) return;
@@ -312,12 +378,21 @@ export default function LeadPaymentsTab({ lead }) {
       setError("");
       try {
         if (editingPayment?._id) {
-          await updatePayment(venueId, leadId, editingPayment._id, payload, token);
+          await updatePayment(
+            venueId,
+            leadId,
+            editingPayment._id,
+            payload,
+            token,
+          );
         } else {
           await createPayment(
             venueId,
             leadId,
-            { ...payload, ...(selectedQuoteId ? { quoteId: selectedQuoteId } : {}) },
+            {
+              ...payload,
+              ...(selectedQuoteId ? { quoteId: selectedQuoteId } : {}),
+            },
             token,
           );
         }
@@ -347,7 +422,9 @@ export default function LeadPaymentsTab({ lead }) {
         await fetchPayments();
       } catch (err) {
         setError(
-          err.response?.data?.error?.message || err.message || "Failed to delete payment.",
+          err.response?.data?.error?.message ||
+            err.message ||
+            "Failed to delete payment.",
         );
       } finally {
         setActionLoadingId(null);
@@ -379,18 +456,18 @@ export default function LeadPaymentsTab({ lead }) {
         confirmedQuotes.length === 0 &&
         reminders.length === 0 &&
         payments.length === 0 && (
-        <div
-          style={{
-            padding: 24,
-            textAlign: "center",
-            color: "#6b6966",
-            fontFamily: "'DM Sans', sans-serif",
-            fontWeight: 700,
-          }}
-        >
-          Loading…
-        </div>
-      )}
+          <div
+            style={{
+              padding: 24,
+              textAlign: "center",
+              color: "#6b6966",
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 700,
+            }}
+          >
+            Loading…
+          </div>
+        )}
 
       {!loading && (
         <>
@@ -430,7 +507,8 @@ export default function LeadPaymentsTab({ lead }) {
                 style={{
                   marginTop: 10,
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 220px), 1fr))",
+                  gridTemplateColumns:
+                    "repeat(auto-fill, minmax(min(100%, 220px), 1fr))",
                   gap: 10,
                 }}
               >
@@ -444,17 +522,37 @@ export default function LeadPaymentsTab({ lead }) {
                       style={{
                         textAlign: "left",
                         borderRadius: 12,
-                        border: active ? "2px solid #c9a84c" : "1px solid #e8e6e2",
+                        border: active
+                          ? "2px solid #c9a84c"
+                          : "1px solid #e8e6e2",
                         background: active ? "#fff8e7" : "#faf9f7",
                         padding: 10,
                         cursor: "pointer",
                       }}
                     >
-                      <div style={{ fontSize: 12, fontWeight: 900, color: "#1a1917", fontFamily: "'DM Sans', sans-serif" }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 900,
+                          color: "#1a1917",
+                          fontFamily: "'DM Sans', sans-serif",
+                        }}
+                      >
                         Quote {idx + 1}
                       </div>
-                      <div style={{ marginTop: 4, fontSize: 12, color: "#6b6966", fontFamily: "'DM Sans', sans-serif", fontWeight: 700 }}>
-                        Total: ₹{Number(q?.pricing?.totals?.total || 0).toLocaleString("en-IN")}
+                      <div
+                        style={{
+                          marginTop: 4,
+                          fontSize: 12,
+                          color: "#6b6966",
+                          fontFamily: "'DM Sans', sans-serif",
+                          fontWeight: 700,
+                        }}
+                      >
+                        Total: ₹
+                        {Number(q?.pricing?.totals?.total || 0).toLocaleString(
+                          "en-IN",
+                        )}
                       </div>
                     </button>
                   );
@@ -463,13 +561,18 @@ export default function LeadPaymentsTab({ lead }) {
             )}
           </div>
           <ConfirmedQuoteCard confirmedQuote={selectedQuote} />
-          <PaymentProgressCard totalAmount={totalAmount} collectedAmount={collectedAmount} />
+          <PaymentProgressCard
+            totalAmount={totalAmount}
+            collectedAmount={collectedAmount}
+          />
           <PaymentHistoryCard
             payments={filteredPayments}
             onDelete={(p) => setDeletePayment(p)}
             onEdit={handleEditPayment}
             onAdd={handleAddPayment}
+            onReceived={handleReceivedPaymentClick}
             actionLoadingId={actionLoadingId}
+            userRole={userRole}
           />
           <PaymentRemindersCard
             reminders={filteredReminders}
@@ -501,6 +604,16 @@ export default function LeadPaymentsTab({ lead }) {
         reminder={receivedReminder}
         submitting={receivedSubmitting}
       />
+
+      {receivedPayment && (
+        <ConfirmDeleteModal
+          title="Confirm Payment Received"
+          message={`Mark ₹${Number(receivedPayment.amount || 0).toLocaleString("en-IN")} as received?`}
+          loading={receivedSubmitting}
+          onCancel={() => setReceivedPayment(null)}
+          onConfirm={handleReceivedPaymentConfirm}
+        />
+      )}
 
       <AddPaymentModal
         isOpen={addPaymentOpen}

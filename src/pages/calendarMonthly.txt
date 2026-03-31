@@ -1,0 +1,580 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
+import { listConfirmedLeads, listConfirmedLeadStats } from "../api/leads.js";
+import {
+  MONTH_FULL,
+  DAY_LABELS,
+  getDaysInMonth,
+  getStartOffset,
+  toDateKey,
+} from "../utils/calendarUtils.js";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { key: "all", label: "All" },
+  { key: "venue_buyout", label: "Venue buyout" },
+  { key: "space_buyout", label: "Space buyout" },
+];
+
+const EVENT_COLORS = [
+  "#FF9500",
+  "#5B7FFF",
+  "#FF3B7F",
+  "#9D6FFF",
+  "#1DB884",
+  "#FFB84D",
+  "#FF6B6B",
+  "#4ECDC4",
+  "#F38181",
+  "#E67E22",
+];
+
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
+// Slices the date part from an ISO string WITHOUT any timezone conversion.
+// "2026-03-26T10:46:00.000Z"  →  [2026, 2, 26]  (month is 0-indexed)
+function isoToYMD(isoStr) {
+  const [y, m, d] = isoStr.split("T")[0].split("-").map(Number);
+  return [y, m - 1, d];
+}
+
+// Returns every "YYYY-MM-DD" key from startISO to endISO inclusive.
+// Purely string-based — no UTC/local timezone conversion.
+function getDateKeys(startISO, endISO) {
+  if (!startISO || !endISO) return [];
+  const [sy, sm, sd] = isoToYMD(startISO);
+  const [ey, em, ed] = isoToYMD(endISO);
+  const cursor = new Date(sy, sm, sd); // local Date, no UTC shift
+  const last   = new Date(ey, em, ed);
+  const keys   = [];
+  while (cursor <= last) {
+    keys.push(
+      toDateKey(cursor.getFullYear(), cursor.getMonth(), cursor.getDate())
+    );
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return keys;
+}
+
+// ─── Misc helpers ─────────────────────────────────────────────────────────────
+
+function formatIndianRupees(amount) {
+  const num = Math.round(amount ?? 0);
+  const str = num.toString();
+  if (str.length <= 3) return "\u20B9" + str;
+  const last3 = str.slice(-3);
+  const rest  = str.slice(0, -3);
+  return "\u20B9" + rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + last3;
+}
+
+function capitalize(s) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+}
+
+function getLeadColor(leadId) {
+  let hash = 0;
+  for (let i = 0; i < leadId.length; i++) hash = (hash * 31 + leadId.charCodeAt(i)) | 0;
+  return EVENT_COLORS[Math.abs(hash) % EVENT_COLORS.length];
+}
+
+// ─── TabButton ────────────────────────────────────────────────────────────────
+
+function TabButton({ active, label, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        border: "none",
+        cursor: "pointer",
+        padding: "8px 14px",
+        borderRadius: 999,
+        fontFamily: "'DM Sans', sans-serif",
+        fontWeight: 800,
+        fontSize: 13,
+        background: active ? "#1a1917" : "#f0ede8",
+        color: active ? "white" : "#1a1917",
+        transition: "background 0.15s, color 0.15s",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ─── EventStrip ───────────────────────────────────────────────────────────────
+//
+//  position  border-radius        shows text?
+//  --------  -------------------  -----------
+//  "only"    6px all sides        yes
+//  "first"   6px left, 0 right    yes
+//  "middle"  0                    no (solid bar)
+//  "last"    0 left, 6px right    no (solid bar)
+
+function EventStrip({ lead, position }) {
+  const color       = getLeadColor(lead._id);
+  const showContent = position === "only" || position === "first";
+
+  const borderRadius = {
+    only:   "6px",
+    first:  "6px 0 0 6px",
+    middle: "0",
+    last:   "0 6px 6px 0",
+  }[position] ?? "6px";
+
+  return (
+    <div
+      title={`${capitalize(lead.eventType)} \u00B7 ${lead.contact?.clientName || lead.contact?.name || ""} \u00B7 ${lead.contact?.phone || ""}`}
+      style={{
+        borderRadius,
+        padding:    showContent ? "5px 7px" : "0",
+        minHeight:  18,
+        background: color,
+        color:      "white",
+        fontFamily: "'DM Sans', sans-serif",
+        cursor:     "pointer",
+        boxShadow:  showContent ? "0 2px 4px rgba(0,0,0,0.12)" : "none",
+        transition: "transform 0.12s, box-shadow 0.12s",
+        userSelect: "none",
+        overflow:   "hidden",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "scale(1.02)";
+        e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.18)";
+        e.currentTarget.style.zIndex    = "10";
+        e.currentTarget.style.position  = "relative";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "scale(1)";
+        e.currentTarget.style.boxShadow = showContent ? "0 2px 4px rgba(0,0,0,0.12)" : "none";
+        e.currentTarget.style.zIndex    = "";
+        e.currentTarget.style.position  = "";
+      }}
+    >
+      {showContent && (
+        <>
+          <div style={{ fontWeight: 800, fontSize: 9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 1 }}>
+            {capitalize(lead.eventType) || "Event"}
+          </div>
+          <div style={{ fontSize: 9, opacity: 0.95, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 1 }}>
+            {lead.contact?.clientName || lead.contact?.name || "Client"}
+          </div>
+          <div style={{ fontSize: 8, opacity: 0.85, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {lead.contact?.phone || ""}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── CalendarGrid ─────────────────────────────────────────────────────────────
+
+function CalendarGrid({ year, month, leadsByDate, allLeads }) {
+  const days   = getDaysInMonth(year, month);
+  const offset = getStartOffset(year, month);
+  const cells  = [
+    ...Array(offset).fill(null),
+    ...Array.from({ length: days }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  // Pre-compute position for every lead on every date it spans.
+  // No year/month filter here — we store all dates and look up per cell.
+  const eventPositions = useMemo(() => {
+    const pos = {};
+
+    for (const lead of allLeads) {
+      const sd = lead?.specialDay;
+      if (!sd?.startAt || !sd?.endAt) continue;
+
+      const allKeys = getDateKeys(sd.startAt, sd.endAt);
+      const total   = allKeys.length;
+
+      allKeys.forEach((key, idx) => {
+        if (!pos[key]) pos[key] = {};
+
+        const position =
+          total === 1         ? "only"
+          : idx === 0         ? "first"
+          : idx === total - 1 ? "last"
+          :                     "middle";
+
+        pos[key][lead._id] = { position, totalDays: total };
+      });
+    }
+
+    return pos;
+  }, [allLeads]);
+
+  const today = new Date();
+
+  return (
+    <div>
+      {/* Day headers */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          marginBottom: 8,
+          borderBottom: "2px solid #e8e6e2",
+        }}
+      >
+        {DAY_LABELS.map((day) => (
+          <div
+            key={day}
+            style={{
+              textAlign: "center",
+              padding: "10px 4px",
+              fontWeight: 700,
+              fontSize: 11,
+              color: "#1a1917",
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          border: "1px solid #e8e6e2",
+          borderRadius: 12,
+          overflow: "hidden",
+        }}
+      >
+        {cells.map((day, idx) => {
+          const isToday =
+            day !== null &&
+            day === today.getDate() &&
+            month === today.getMonth() &&
+            year === today.getFullYear();
+
+          const dateKey  = day ? toDateKey(year, month, day) : null;
+          const leads    = dateKey ? leadsByDate[dateKey] || [] : [];
+          const MAX_SHOW = 3;
+
+          return (
+            <div
+              key={idx}
+              style={{
+                minHeight:    130,
+                borderRight:  idx % 7 !== 6          ? "1px solid #e8e6e2" : "none",
+                borderBottom: idx < cells.length - 7  ? "1px solid #e8e6e2" : "none",
+                padding:      "8px 6px",
+                background:   day === null ? "#faf9f7" : isToday ? "#f0f8ff" : "white",
+                display:      "flex",
+                flexDirection: "column",
+              }}
+            >
+              {day !== null && (
+                <>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: isToday ? "#5B7FFF" : "#1a1917",
+                      marginBottom: 5,
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    {day}
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+                    {leads.length === 0 ? (
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "#d4d1cc",
+                          textAlign: "center",
+                          paddingTop: 16,
+                          fontFamily: "'DM Sans', sans-serif",
+                        }}
+                      >
+                        —
+                      </div>
+                    ) : (
+                      <>
+                        {leads.slice(0, MAX_SHOW).map((lead) => {
+                          const info = eventPositions[dateKey]?.[lead._id] ?? {
+                            position: "only",
+                            totalDays: 1,
+                          };
+                          return (
+                            <EventStrip
+                              key={lead._id}
+                              lead={lead}
+                              position={info.position}
+                            />
+                          );
+                        })}
+                        {leads.length > MAX_SHOW && (
+                          <div
+                            style={{
+                              fontSize: 9,
+                              color: "#9a9896",
+                              fontWeight: 700,
+                              fontFamily: "'DM Sans', sans-serif",
+                            }}
+                          >
+                            +{leads.length - MAX_SHOW} more
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function CalendarMonthly() {
+  const { access_token: token, venueId } = useSelector(
+    (state) => state.user.value
+  );
+
+  const now = new Date();
+  const [activeTab,   setActiveTab]   = useState("all");
+  const [year,        setYear]        = useState(now.getFullYear());
+  const [month,       setMonth]       = useState(now.getMonth());
+  const [leadsByDate, setLeadsByDate] = useState({});
+  const [allLeads,    setAllLeads]    = useState([]);
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState("");
+  const [stats,       setStats]       = useState(null);
+
+  // ── Fetch leads ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!token || !venueId) return;
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const params = activeTab === "all" ? {} : { bookingType: activeTab };
+        const data   = await listConfirmedLeads(venueId, token, params);
+        const arr    = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+          ? data.data
+          : [];
+
+        // Group leads by every calendar date they span in the current month.
+        // getDateKeys slices the ISO string directly — no UTC/timezone shift.
+        const dateMap = {};
+        for (const lead of arr) {
+          const sd = lead?.specialDay;
+          if (!sd?.startAt || !sd?.endAt) continue;
+
+          for (const key of getDateKeys(sd.startAt, sd.endAt)) {
+            const [ky, km] = key.split("-").map(Number);
+            if (ky !== year || km - 1 !== month) continue;
+
+            if (!dateMap[key]) dateMap[key] = [];
+            if (!dateMap[key].find((l) => l._id === lead._id)) {
+              dateMap[key].push(lead);
+            }
+          }
+        }
+
+        if (!cancelled) {
+          setLeadsByDate(dateMap);
+          setAllLeads(arr);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err.response?.data?.error?.message ||
+              err.message ||
+              "Failed to load bookings."
+          );
+          setLeadsByDate({});
+          setAllLeads([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [token, venueId, year, month, activeTab]);
+
+  // ── Fetch stats ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!token || !venueId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const data = await listConfirmedLeadStats(venueId, token, {
+          year,
+          month: month + 1,
+        });
+        if (!cancelled) setStats(data?.data ?? data ?? null);
+      } catch {
+        if (!cancelled) setStats(null);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [token, venueId, year, month]);
+
+  // ── Navigation ──────────────────────────────────────────────────────────────
+  const goTo = (y, m) => {
+    const d = new Date(y, m, 1);
+    setYear(d.getFullYear());
+    setMonth(d.getMonth());
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  return (
+    <section
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        background: "white",
+        borderRadius: 20,
+        padding: "20px",
+        border: "1px solid #f1f0ee",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+        fontFamily: "'DM Sans', sans-serif",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 16,
+          marginBottom: 20,
+          flexWrap: "wrap",
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 700,
+            color: "#1a1917",
+            fontFamily: "'DM Serif Display', Georgia, serif",
+          }}
+        >
+          {MONTH_FULL[month]} {year}
+        </h2>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button type="button" onClick={() => goTo(year, month - 1)} style={navBtnStyle} aria-label="Previous month">&#8249;</button>
+          <button type="button" onClick={() => { const t = new Date(); goTo(t.getFullYear(), t.getMonth()); }} style={todayBtnStyle}>Today</button>
+          <button type="button" onClick={() => goTo(year, month + 1)} style={navBtnStyle} aria-label="Next month">&#8250;</button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      {stats && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+            gap: 12,
+            marginBottom: 20,
+          }}
+        >
+          <StatCard label="Total bookings" value={stats.totalBookings ?? 0} color="#1a1917" />
+          <StatCard label="Total revenue"  value={formatIndianRupees(stats.totalRevenue)} color="#e8875a" />
+          <StatCard label="Event days"     value={stats.totalEventDays ?? 0} color="#5ab99c" />
+          <StatCard label="Occupancy"      value={stats.occupancyPercent != null ? `${stats.occupancyPercent.toFixed(0)}%` : "0%"} color="#7c6fcd" />
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {TABS.map((t) => (
+          <TabButton
+            key={t.key}
+            active={activeTab === t.key}
+            label={t.label}
+            onClick={() => setActiveTab(t.key)}
+          />
+        ))}
+      </div>
+
+      {/* Error */}
+      {!!error && (
+        <div
+          style={{
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: "#fde8e6",
+            border: "1px solid #f6c8c2",
+            color: "#a33b2d",
+            fontSize: 13,
+            fontWeight: 700,
+            marginBottom: 16,
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div style={{ padding: 40, textAlign: "center", color: "#6b6966", fontWeight: 700, fontSize: 14 }}>
+          Loading bookings\u2026
+        </div>
+      )}
+
+      {/* Calendar */}
+      {!loading && (
+        <CalendarGrid
+          year={year}
+          month={month}
+          leadsByDate={leadsByDate}
+          allLeads={allLeads}
+        />
+      )}
+    </section>
+  );
+}
+
+// ─── Shared small components ──────────────────────────────────────────────────
+
+function StatCard({ label, value, color }) {
+  return (
+    <div style={{ background: "#faf9f7", borderRadius: 12, padding: "12px 14px", border: "1px solid #f1f0ee" }}>
+      <div style={{ fontSize: 10, color: "#9a9896", textTransform: "uppercase", fontWeight: 600, marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800, color }}>{value}</div>
+    </div>
+  );
+}
+
+const navBtnStyle = {
+  width: 36, height: 36, borderRadius: 8,
+  border: "1px solid #e8e6e2", background: "white",
+  cursor: "pointer", display: "flex", alignItems: "center",
+  justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#1a1917",
+};
+
+const todayBtnStyle = {
+  padding: "8px 16px", borderRadius: 8,
+  border: "1px solid #e8e6e2", background: "#1a1917",
+  color: "white", cursor: "pointer",
+  fontWeight: 700, fontSize: 12,
+  fontFamily: "'DM Sans', sans-serif",
+};

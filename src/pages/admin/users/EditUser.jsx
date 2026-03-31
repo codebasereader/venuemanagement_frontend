@@ -20,6 +20,9 @@ function normalizeVenue(v) {
   };
 }
 
+/** Roles that are scoped to a single venue (incharge + owner). */
+const ROLES_WITH_VENUE = ["incharge", "owner"];
+
 export default function EditUser({ open, onClose, onSuccess, user }) {
   const accessToken = useSelector((state) => state.user.value.access_token);
   const [msgApi, contextHolder] = message.useMessage();
@@ -29,6 +32,12 @@ export default function EditUser({ open, onClose, onSuccess, user }) {
   const roleValue = Form.useWatch("role", form);
   const [venuesLoading, setVenuesLoading] = React.useState(false);
   const [venues, setVenues] = React.useState([]);
+
+  useEffect(() => {
+    if (roleValue && !ROLES_WITH_VENUE.includes(roleValue)) {
+      form.setFieldValue("venueId", null);
+    }
+  }, [roleValue, form]);
 
   useEffect(() => {
     if (!open || !accessToken) return;
@@ -77,7 +86,9 @@ export default function EditUser({ open, onClose, onSuccess, user }) {
         name: values.name?.trim(),
         email: values.email?.trim(),
         role: values.role,
-        venueId: values.role === "incharge" ? values.venueId || null : null,
+        venueId: ROLES_WITH_VENUE.includes(values.role)
+          ? values.venueId || null
+          : null,
       };
 
       await updateUser(user._id, payload, accessToken);
@@ -142,17 +153,18 @@ export default function EditUser({ open, onClose, onSuccess, user }) {
               options={[
                 { label: "Admin", value: "admin" },
                 { label: "Incharge", value: "incharge" },
+                { label: "Owner", value: "owner" },
               ]}
             />
           </Form.Item>
 
-          {roleValue === "incharge" && (
+          {ROLES_WITH_VENUE.includes(roleValue) && (
             <Form.Item label="Venue (optional)" name="venueId">
               <Select
                 allowClear
                 showSearch
                 loading={venuesLoading}
-                placeholder="Select a venue"
+                placeholder="Map user to a venue"
                 options={venueOptions}
                 optionFilterProp="label"
               />

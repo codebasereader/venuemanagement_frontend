@@ -37,11 +37,9 @@ export async function listPayments(venueId, leadId, token) {
  * }
  */
 export async function createPayment(venueId, leadId, payload, token) {
-  const res = await axios.post(
-    `${base(venueId, leadId)}/payments`,
-    payload,
-    { headers: { "Content-Type": "application/json", ...authHeaders(token) } },
-  );
+  const res = await axios.post(`${base(venueId, leadId)}/payments`, payload, {
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+  });
   return unwrapData(res);
 }
 
@@ -49,7 +47,13 @@ export async function createPayment(venueId, leadId, payload, token) {
  * Update a payment (edit flow).
  * PATCH /api/venues/{venueId}/leads/{leadId}/payments/{paymentId}
  */
-export async function updatePayment(venueId, leadId, paymentId, payload, token) {
+export async function updatePayment(
+  venueId,
+  leadId,
+  paymentId,
+  payload,
+  token,
+) {
   const res = await axios.patch(
     `${base(venueId, leadId)}/payments/${paymentId}`,
     payload,
@@ -66,6 +70,22 @@ export async function deletePayment(venueId, leadId, paymentId, token) {
   const res = await axios.delete(
     `${base(venueId, leadId)}/payments/${paymentId}`,
     { headers: authHeaders(token) },
+  );
+  return unwrapData(res);
+}
+
+/**
+ * Confirm/Mark advance as received.
+ * PATCH /api/events/{eventId}/advances/{advanceNumber}/confirm
+ * Body: {
+ *   status: 'received'
+ * }
+ */
+export async function confirmAdvance(eventId, advanceNumber, token) {
+  const res = await axios.patch(
+    `${API_BASE_URL}events/${eventId}/advances/${advanceNumber}/confirm`,
+    { status: "received" },
+    { headers: { "Content-Type": "application/json", ...authHeaders(token) } },
   );
   return unwrapData(res);
 }

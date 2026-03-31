@@ -201,8 +201,7 @@ function MonthlyGrid({ year, month, blockedDates, onDayClick }) {
             return <DayCell key={`e-${idx}`} day={null} />;
           }
           const key = toDateKey(year, month, day);
-          const prevKey =
-            day > 1 ? toDateKey(year, month, day - 1) : null;
+          const prevKey = day > 1 ? toDateKey(year, month, day - 1) : null;
           const nextKey =
             day < getDaysInMonth(year, month)
               ? toDateKey(year, month, day + 1)
@@ -380,9 +379,7 @@ function LeadDetailsModal({ isOpen, dateKey, leads, onClose }) {
                       textTransform: "uppercase",
                     }}
                   >
-                    {lead.bookingType === "space_buyout"
-                      ? "Space"
-                      : "Venue"}
+                    {lead.bookingType === "space_buyout" ? "Space" : "Venue"}
                   </span>
                 </div>
                 <div
@@ -392,8 +389,7 @@ function LeadDetailsModal({ isOpen, dateKey, leads, onClose }) {
                     marginBottom: 4,
                   }}
                 >
-                  {lead.eventType || "Event"} at{" "}
-                  {lead.venue?.name || "Venue"}
+                  {lead.eventType || "Event"} at {lead.venue?.name || "Venue"}
                 </div>
                 <div
                   style={{
@@ -422,10 +418,9 @@ function LeadDetailsModal({ isOpen, dateKey, leads, onClose }) {
 }
 
 export default function CalendarMonthly() {
-  const {
-    access_token: token,
-    venueId,
-  } = useSelector((state) => state.user.value);
+  const { access_token: token, venueId } = useSelector(
+    (state) => state.user.value,
+  );
 
   const now = new Date();
   const [activeTab, setActiveTab] = useState("all");
@@ -447,8 +442,7 @@ export default function CalendarMonthly() {
       setLoading(true);
       setError("");
       try {
-        const params =
-          activeTab === "all" ? {} : { bookingType: activeTab };
+        const params = activeTab === "all" ? {} : { bookingType: activeTab };
         const data = await listConfirmedLeads(venueId, token, params);
         const arr = Array.isArray(data)
           ? data
@@ -467,10 +461,7 @@ export default function CalendarMonthly() {
           }
           const cursor = new Date(start);
           while (cursor <= end) {
-            if (
-              cursor.getFullYear() === year &&
-              cursor.getMonth() === month
-            ) {
+            if (cursor.getFullYear() === year && cursor.getMonth() === month) {
               const key = toDateKey(
                 cursor.getFullYear(),
                 cursor.getMonth(),
@@ -589,11 +580,7 @@ export default function CalendarMonthly() {
             Confirmed leads by month and booking type
           </p>
         </div>
-        <MonthSelector
-          year={year}
-          month={month}
-          onChange={handleMonthChange}
-        />
+        <MonthSelector year={year} month={month} onChange={handleMonthChange} />
       </div>
 
       {stats && (
