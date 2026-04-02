@@ -62,7 +62,6 @@ export default function TargetHome() {
     (state) => state.user.value,
   );
 
-
   const fetchMonthly = useCallback(async () => {
     if (!venueId || !accessToken) return;
     setMonthlyLoading(true);
