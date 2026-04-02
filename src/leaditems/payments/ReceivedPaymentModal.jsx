@@ -134,7 +134,8 @@ export default function ReceivedPaymentModal({
             margin: "0 0 16px 0",
           }}
         >
-          Are you sure you received {formatINR(amount)}? This will update the progress and mark the reminder as received.
+          Are you sure you received {formatINR(amount)}? This will update the
+          progress and mark the reminder as received.
         </p>
         <form onSubmit={handleConfirm}>
           <label style={labelStyle}>Received in</label>
