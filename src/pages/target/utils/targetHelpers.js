@@ -50,13 +50,32 @@ export function profitColor(val) {
 // ─── Row builder ──────────────────────────────────────────────────────────────
 
 /**
- * Merge API plan rows with the current spaces list.
- * Always places "Complete Venue Buyout" first, followed by one row per space.
+ * Build plan rows from the full monthly-plan API response object.
+ * Spaces come from data.spaces (which carry per-space actual booking data).
+ * "Complete Venue Buyout" actuals = totals - sum of all space actuals.
+ * Expected values are read from data.rows (saved plan rows).
  */
-export function mergeRowsWithSpaces(apiRows, spaces) {
+export function mergeRowsWithApiData(apiData) {
   const rows = [];
+  const savedRows = apiData?.rows ?? [];
+  const apiSpaces = apiData?.spaces ?? [];
+  const totals = apiData?.totals ?? {};
 
-  const vbRow = apiRows?.find((r) => r.rowType === "venue_buyout");
+  // Venue-buyout actuals = grand total minus all individual space actuals
+  const spacesActualBookings = apiSpaces.reduce(
+    (s, sp) => s + (sp.actualBookings ?? 0),
+    0,
+  );
+  const spacesActualBusiness = apiSpaces.reduce(
+    (s, sp) => s + (sp.actualBusiness ?? 0),
+    0,
+  );
+  const spacesActualExpenses = apiSpaces.reduce(
+    (s, sp) => s + (sp.actualExpenses ?? 0),
+    0,
+  );
+
+  const vbRow = savedRows.find((r) => r.rowType === "venue_buyout");
   rows.push({
     rowType: "venue_buyout",
     spaceId: null,
@@ -64,25 +83,26 @@ export function mergeRowsWithSpaces(apiRows, spaces) {
     expectedBookings: vbRow?.expectedBookings ?? "",
     expectedBusiness: vbRow?.expectedBusiness ?? "",
     expectedExpenses: vbRow?.expectedExpenses ?? "",
-    actualBookings: vbRow?.actualBookings ?? 0,
-    actualBusiness: vbRow?.actualBusiness ?? 0,
-    actualExpenses: vbRow?.actualExpenses ?? 0,
+    actualBookings: (totals.actualBookings ?? 0) - spacesActualBookings,
+    actualBusiness: (totals.actualBusiness ?? 0) - spacesActualBusiness,
+    actualExpenses: (totals.actualExpenses ?? 0) - spacesActualExpenses,
   });
 
-  for (const space of spaces) {
-    const apiRow = apiRows?.find(
-      (r) => r.spaceId && r.spaceId.toString() === space._id.toString(),
+  for (const space of apiSpaces) {
+    const savedRow = savedRows.find(
+      (r) =>
+        r.spaceId && r.spaceId.toString() === (space.spaceId ?? "").toString(),
     );
     rows.push({
       rowType: "space",
-      spaceId: space._id,
-      spaceName: space.name || space.spaceName || "Unnamed Space",
-      expectedBookings: apiRow?.expectedBookings ?? "",
-      expectedBusiness: apiRow?.expectedBusiness ?? "",
-      expectedExpenses: apiRow?.expectedExpenses ?? "",
-      actualBookings: apiRow?.actualBookings ?? 0,
-      actualBusiness: apiRow?.actualBusiness ?? 0,
-      actualExpenses: apiRow?.actualExpenses ?? 0,
+      spaceId: space.spaceId,
+      spaceName: space.spaceName || "Unnamed Space",
+      expectedBookings: savedRow?.expectedBookings ?? "",
+      expectedBusiness: savedRow?.expectedBusiness ?? "",
+      expectedExpenses: savedRow?.expectedExpenses ?? "",
+      actualBookings: space.actualBookings ?? 0,
+      actualBusiness: space.actualBusiness ?? 0,
+      actualExpenses: space.actualExpenses ?? 0,
     });
   }
 

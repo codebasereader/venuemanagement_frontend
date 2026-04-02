@@ -1,7 +1,6 @@
 ﻿import React, { useCallback, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { message } from "antd";
-import { listSpaces } from "../../api/spaces";
 import {
   getMonthlyPlan,
   upsertMonthlyPlan,
@@ -10,7 +9,7 @@ import {
 import {
   CURRENT_MONTH,
   CURRENT_YEAR,
-  mergeRowsWithSpaces,
+  mergeRowsWithApiData,
   parseNum,
 } from "./utils/targetHelpers";
 import { FONT, SERIF } from "./utils/targetStyles";
@@ -44,8 +43,6 @@ const TABS = [
 
 export default function TargetHome() {
   const [activeTab, setActiveTab] = useState("monthly");
-  const [spaces, setSpaces] = useState([]);
-  const [spacesLoaded, setSpacesLoaded] = useState(false);
 
   // Monthly state
   const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
@@ -65,20 +62,9 @@ export default function TargetHome() {
     (state) => state.user.value,
   );
 
-  // â”€â”€ Load spaces once â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-  useEffect(() => {
-    if (!venueId || !accessToken) return;
-    listSpaces(accessToken, venueId)
-      .then((data) => setSpaces(Array.isArray(data) ? data : []))
-      .catch(() => {})
-      .finally(() => setSpacesLoaded(true));
-  }, [venueId, accessToken]);
-
-  // â”€â”€ Fetch monthly plan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const fetchMonthly = useCallback(async () => {
-    if (!venueId || !accessToken || !spacesLoaded) return;
+    if (!venueId || !accessToken) return;
     setMonthlyLoading(true);
     try {
       const data = await getMonthlyPlan(
@@ -87,17 +73,16 @@ export default function TargetHome() {
         selectedMonth,
         selectedYear,
       );
-      const rows = mergeRowsWithSpaces(data?.rows ?? [], spaces);
+      const rows = mergeRowsWithApiData(data);
       setSavedRows(rows);
       setDraftRows(rows.map((r) => ({ ...r })));
     } catch {
-      const rows = mergeRowsWithSpaces([], spaces);
-      setSavedRows(rows);
-      setDraftRows(rows.map((r) => ({ ...r })));
+      setSavedRows([]);
+      setDraftRows([]);
     } finally {
       setMonthlyLoading(false);
     }
-  }, [venueId, accessToken, selectedMonth, selectedYear, spaces, spacesLoaded]);
+  }, [venueId, accessToken, selectedMonth, selectedYear]);
 
   useEffect(() => {
     if (activeTab === "monthly") {
@@ -159,7 +144,7 @@ export default function TargetHome() {
         })),
       };
       const data = await upsertMonthlyPlan(accessToken, venueId, payload);
-      const rows = mergeRowsWithSpaces(data?.rows ?? [], spaces);
+      const rows = mergeRowsWithApiData(data);
       setSavedRows(rows);
       setDraftRows(rows.map((r) => ({ ...r })));
       setEditMode(false);
@@ -184,7 +169,7 @@ export default function TargetHome() {
 
   // â”€â”€ Derived state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  const isMonthlyLoading = monthlyLoading || !spacesLoaded;
+  const isMonthlyLoading = monthlyLoading;
   const displayRows = editMode ? draftRows : savedRows;
   const isLoading = activeTab === "monthly" ? isMonthlyLoading : yearlyLoading;
 
