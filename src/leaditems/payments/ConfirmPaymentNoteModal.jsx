@@ -42,11 +42,6 @@ const inputStyle = {
   boxSizing: "border-box",
 };
 
-const selectStyle = {
-  ...inputStyle,
-  cursor: "pointer",
-};
-
 const btnBase = {
   padding: "10px 16px",
   borderRadius: 12,
@@ -57,56 +52,31 @@ const btnBase = {
   cursor: "pointer",
 };
 
-export default function ReceivedPaymentModal({
+export default function ConfirmPaymentNoteModal({
   isOpen,
   onClose,
   onConfirm,
-  reminder = null,
+  payment = null,
   submitting = false,
 }) {
-  const [notes, setNotes] = useState("");
   const [confirmedNotes, setConfirmedNotes] = useState("");
-  const [method, setMethod] = useState("account");
-  const [receivedByName, setReceivedByName] = useState("");
-  const [givenByName, setGivenByName] = useState("");
-
-  const amount = reminder?.expectedAmount ?? 0;
 
   const handleConfirm = (e) => {
     e.preventDefault();
     onConfirm({
-      amount: Number(amount) || 0,
-      method,
-      notes: (notes || "").trim(),
       confirmedNotes: (confirmedNotes || "").trim(),
-      reminderId: reminder?._id,
-      receivedByName: receivedByName.trim(),
-      givenByName: givenByName.trim(),
     });
-    setNotes("");
     setConfirmedNotes("");
-    setMethod("account");
-    setReceivedByName("");
-    setGivenByName("");
   };
 
   const handleClose = () => {
     if (!submitting) {
-      setNotes("");
       setConfirmedNotes("");
-      setMethod("account");
-      setReceivedByName("");
-      setGivenByName("");
       onClose?.();
     }
   };
 
-  if (!isOpen) return null;
-
-  const canSubmit =
-    Boolean(amount) &&
-    Boolean(receivedByName.trim()) &&
-    Boolean(givenByName.trim());
+  if (!isOpen || !payment) return null;
 
   return (
     <div
@@ -134,48 +104,10 @@ export default function ReceivedPaymentModal({
             margin: "0 0 16px 0",
           }}
         >
-          Are you sure you received {formatINR(amount)}? This will update the progress and mark the reminder as received.
+          Confirming {formatINR(payment.amount ?? 0)} received on{" "}
+          {new Date(payment.receivedAt).toLocaleDateString("en-IN")}
         </p>
         <form onSubmit={handleConfirm}>
-          <label style={labelStyle}>Received in</label>
-          <select
-            value={method}
-            onChange={(e) => setMethod(e.target.value)}
-            style={{ ...selectStyle, marginBottom: 14 }}
-          >
-            <option value="account">Bank / Account transfer</option>
-            <option value="cash">Cash</option>
-          </select>
-
-          <label style={labelStyle}>Received by (staff name)</label>
-          <input
-            type="text"
-            value={receivedByName}
-            onChange={(e) => setReceivedByName(e.target.value)}
-            placeholder="e.g. Kumar"
-            style={{ ...inputStyle, marginBottom: 14 }}
-            required
-          />
-
-          <label style={labelStyle}>Given by (client name)</label>
-          <input
-            type="text"
-            value={givenByName}
-            onChange={(e) => setGivenByName(e.target.value)}
-            placeholder="e.g. Bride family"
-            style={{ ...inputStyle, marginBottom: 14 }}
-            required
-          />
-
-          <label style={labelStyle}>Notes (optional)</label>
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. NEFT ref 123456"
-            style={{ ...inputStyle, marginBottom: 20 }}
-          />
-
           <label style={labelStyle}>Confirmation notes (optional)</label>
           <textarea
             value={confirmedNotes}
@@ -184,12 +116,11 @@ export default function ReceivedPaymentModal({
             style={{
               ...inputStyle,
               marginBottom: 20,
-              minHeight: 60,
+              minHeight: 80,
               resize: "vertical",
               fontFamily: "'DM Sans', sans-serif",
             }}
           />
-
           <div
             style={{
               display: "flex",
@@ -208,10 +139,10 @@ export default function ReceivedPaymentModal({
             </button>
             <button
               type="submit"
-              disabled={submitting || !canSubmit}
+              disabled={submitting}
               style={{ ...btnBase, background: "#c9a84c", color: "#1a1917" }}
             >
-              {submitting ? "Saving…" : "Confirm"}
+              {submitting ? "Confirming…" : "Confirm"}
             </button>
           </div>
         </form>

@@ -136,6 +136,7 @@ export default function PaymentHistoryCard({
   onEdit,
   onAdd,
   onReceived,
+  onConfirm,
   actionLoadingId = null,
   userRole = null,
 }) {
@@ -171,122 +172,185 @@ export default function PaymentHistoryCard({
         const busy = actionLoadingId === p._id;
         const date = p.receivedAt || p.createdAt;
         const isReceived = p.status === "received";
+        const isConfirmed = p.confirmedReceived === true;
         const isIncharge = userRole === "incharge";
         const isOwner = userRole === "owner";
 
         return (
-          <div key={p._id} style={rowStyle}>
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 16,
-                  fontWeight: 900,
-                  color: "#1a1917",
-                  fontFamily: "'DM Sans', sans-serif",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                {formatINR(p.amount ?? 0)}
-                {isReceived && (
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      padding: "4px 8px",
-                      borderRadius: 6,
-                      background: "#e1f5e1",
-                      color: "#2d7a2d",
-                      fontSize: 11,
-                      fontWeight: 800,
-                      fontFamily: "'DM Sans', sans-serif",
-                    }}
-                  >
-                    <CheckIcon size={12} /> Received
-                  </span>
-                )}
-                {!isReceived && (isIncharge || isOwner) && (
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      padding: "4px 8px",
-                      borderRadius: 6,
-                      background: "#fef3e1",
-                      color: "#8b6a1d",
-                      fontSize: 11,
-                      fontWeight: 800,
-                      fontFamily: "'DM Sans', sans-serif",
-                    }}
-                  >
-                    ⏱ Pending
-                  </span>
-                )}
+          <div key={p._id} style={{ display: "grid", gap: 8, marginTop: 12 }}>
+            <div style={rowStyle}>
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 900,
+                    color: "#1a1917",
+                    fontFamily: "'DM Sans', sans-serif",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  {formatINR(p.amount ?? 0)}
+                  {isConfirmed && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        padding: "4px 8px",
+                        borderRadius: 6,
+                        background: "#e1f5e1",
+                        color: "#2d7a2d",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      <CheckIcon size={12} /> Confirmed
+                    </span>
+                  )}
+                  {isReceived && !isConfirmed && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        padding: "4px 8px",
+                        borderRadius: 6,
+                        background: "#e1f5e1",
+                        color: "#2d7a2d",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      <CheckIcon size={12} /> Received
+                    </span>
+                  )}
+                  {!isReceived && !isConfirmed && (isIncharge || isOwner) && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        padding: "4px 8px",
+                        borderRadius: 6,
+                        background: "#fef3e1",
+                        color: "#8b6a1d",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      ⏱ Pending
+                    </span>
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#6b6966",
+                    fontFamily: "'DM Sans', sans-serif",
+                    marginTop: 2,
+                  }}
+                >
+                  {methodLabel(p.method)} • {formatDate(date)}
+                </div>
               </div>
               <div
                 style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                }}
+              >
+                {isOwner && isReceived && !isConfirmed && onConfirm && (
+                  <button
+                    type="button"
+                    onClick={() => onConfirm(p)}
+                    disabled={busy}
+                    style={{
+                      ...addBtnStyle,
+                      background: "#c9a84c",
+                      color: "#1a1917",
+                      padding: "6px 10px",
+                      fontSize: 11,
+                      gap: 4,
+                    }}
+                    title="Confirm receipt"
+                    aria-label="Confirm receipt"
+                  >
+                    Confirm
+                  </button>
+                )}
+                {isOwner && !isReceived && !isConfirmed && onReceived && (
+                  <button
+                    type="button"
+                    onClick={() => onReceived(p)}
+                    disabled={busy}
+                    style={{
+                      ...addBtnStyle,
+                      background: "#2d7a2d",
+                      color: "white",
+                      padding: "6px 10px",
+                      fontSize: 11,
+                      gap: 4,
+                    }}
+                    title="Mark as received"
+                    aria-label="Mark as received"
+                  >
+                    <CheckIcon size={12} /> Received
+                  </button>
+                )}
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(p)}
+                    disabled={busy}
+                    style={iconBtnStyle}
+                    title="Edit"
+                    aria-label="Edit"
+                  >
+                    <PencilIcon />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onDelete(p)}
+                  disabled={busy}
+                  style={iconBtnStyle}
+                  title="Delete"
+                  aria-label="Delete"
+                >
+                  <TrashIcon />
+                </button>
+              </div>
+            </div>
+            {isConfirmed && p.confirmedNotes && (
+              <div
+                style={{
+                  background: "#f5f3ef",
+                  borderLeft: "3px solid #c9a84c",
+                  padding: "10px 12px",
+                  borderRadius: 6,
                   fontSize: 12,
                   color: "#6b6966",
                   fontFamily: "'DM Sans', sans-serif",
-                  marginTop: 2,
                 }}
               >
-                {methodLabel(p.method)} • {formatDate(date)}
+                <div style={{ fontWeight: 800, marginBottom: 4 }}>
+                  Confirmation notes:
+                </div>
+                <div>{p.confirmedNotes}</div>
+                {p.confirmedReceivedAt && (
+                  <div style={{ fontSize: 11, marginTop: 6, color: "#8b8480" }}>
+                    Confirmed on {formatDate(p.confirmedReceivedAt)}
+                  </div>
+                )}
               </div>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                flexWrap: "wrap",
-              }}
-            >
-              {isOwner && !isReceived && onReceived && (
-                <button
-                  type="button"
-                  onClick={() => onReceived(p)}
-                  disabled={busy}
-                  style={{
-                    ...addBtnStyle,
-                    background: "#2d7a2d",
-                    color: "white",
-                    padding: "6px 10px",
-                    fontSize: 11,
-                    gap: 4,
-                  }}
-                  title="Mark as received"
-                  aria-label="Mark as received"
-                >
-                  <CheckIcon size={12} /> Received
-                </button>
-              )}
-              {onEdit && (
-                <button
-                  type="button"
-                  onClick={() => onEdit(p)}
-                  disabled={busy}
-                  style={iconBtnStyle}
-                  title="Edit"
-                  aria-label="Edit"
-                >
-                  <PencilIcon />
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => onDelete(p)}
-                disabled={busy}
-                style={iconBtnStyle}
-                title="Delete"
-                aria-label="Delete"
-              >
-                <TrashIcon />
-              </button>
-            </div>
+            )}
           </div>
         );
       })}

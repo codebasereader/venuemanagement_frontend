@@ -13,6 +13,7 @@ import {
   updatePayment,
   deletePayment,
   confirmAdvance,
+  confirmPayment,
 } from "../../api/payments.js";
 import ConfirmedQuoteCard from "../payments/ConfirmedQuoteCard.jsx";
 import PaymentProgressCard from "../payments/PaymentProgressCard.jsx";
@@ -21,6 +22,7 @@ import PaymentRemindersCard from "../payments/PaymentRemindersCard.jsx";
 import AddReminderModal from "../payments/AddReminderModal.jsx";
 import ReceivedPaymentModal from "../payments/ReceivedPaymentModal.jsx";
 import AddPaymentModal from "../payments/AddPaymentModal.jsx";
+import ConfirmPaymentNoteModal from "../payments/ConfirmPaymentNoteModal.jsx";
 
 function ConfirmDeleteModal({ title, message, loading, onCancel, onConfirm }) {
   return (
@@ -141,6 +143,7 @@ export default function LeadPaymentsTab({ lead }) {
   const [editingReminder, setEditingReminder] = useState(null);
   const [receivedReminder, setReceivedReminder] = useState(null);
   const [receivedPayment, setReceivedPayment] = useState(null);
+  const [confirmingPayment, setConfirmingPayment] = useState(null);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
@@ -303,6 +306,38 @@ export default function LeadPaymentsTab({ lead }) {
   const handleReceivedPaymentClick = (payment) => {
     setReceivedPayment(payment);
   };
+
+  const handleConfirmPaymentClick = (payment) => {
+    setConfirmingPayment(payment);
+  };
+
+  const handleConfirmPaymentSubmit = useCallback(
+    async (payload) => {
+      if (!venueId || !leadId || !token || !confirmingPayment?._id) return;
+      setReceivedSubmitting(true);
+      setError("");
+      try {
+        await confirmPayment(
+          venueId,
+          leadId,
+          confirmingPayment._id,
+          payload,
+          token,
+        );
+        setConfirmingPayment(null);
+        await fetchPayments();
+      } catch (err) {
+        setError(
+          err.response?.data?.error?.message ||
+            err.message ||
+            "Failed to confirm payment.",
+        );
+      } finally {
+        setReceivedSubmitting(false);
+      }
+    },
+    [venueId, leadId, token, confirmingPayment, fetchPayments],
+  );
 
   const handleAddPayment = () => {
     setEditingPayment(null);
@@ -571,6 +606,7 @@ export default function LeadPaymentsTab({ lead }) {
             onEdit={handleEditPayment}
             onAdd={handleAddPayment}
             onReceived={handleReceivedPaymentClick}
+            onConfirm={handleConfirmPaymentClick}
             actionLoadingId={actionLoadingId}
             userRole={userRole}
           />
@@ -614,6 +650,14 @@ export default function LeadPaymentsTab({ lead }) {
           onConfirm={handleReceivedPaymentConfirm}
         />
       )}
+
+      <ConfirmPaymentNoteModal
+        isOpen={Boolean(confirmingPayment)}
+        onClose={() => setConfirmingPayment(null)}
+        onConfirm={handleConfirmPaymentSubmit}
+        payment={confirmingPayment}
+        submitting={receivedSubmitting}
+      />
 
       <AddPaymentModal
         isOpen={addPaymentOpen}

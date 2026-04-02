@@ -194,6 +194,24 @@ const TargetIcon = ({ size = 20 }) => (
   </svg>
 );
 
+const EmiIcon = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <line x1="2" y1="10" x2="22" y2="10" />
+    <line x1="6" y1="15" x2="10" y2="15" />
+    <line x1="14" y1="15" x2="18" y2="15" />
+  </svg>
+);
+
 // ── Nav configs (role-based) ───────────────────────────────────────────────
 
 const inchargeNavItems = [
@@ -217,6 +235,7 @@ const ownerNavItems = [
   { path: "/calendar", label: "Calendar", icon: CalendarIcon },
   { path: "/daybook", label: "Daybook", icon: DaybookIcon },
   { path: "/target", label: "Target", icon: TargetIcon },
+  { path: "/emi", label: "EMI Tracker", icon: EmiIcon },
   { path: "/profile", label: "Profile", icon: ProfileIcon },
 ];
 

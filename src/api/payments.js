@@ -75,6 +75,28 @@ export async function deletePayment(venueId, leadId, paymentId, token) {
 }
 
 /**
+ * Confirm a received payment with notes.
+ * PATCH /api/venues/{venueId}/leads/{leadId}/payments/{paymentId}/confirm
+ * Body: {
+ *   confirmedNotes?: string
+ * }
+ */
+export async function confirmPayment(
+  venueId,
+  leadId,
+  paymentId,
+  payload,
+  token,
+) {
+  const res = await axios.patch(
+    `${base(venueId, leadId)}/payments/${paymentId}/confirm`,
+    payload,
+    { headers: { "Content-Type": "application/json", ...authHeaders(token) } },
+  );
+  return unwrapData(res);
+}
+
+/**
  * Confirm/Mark advance as received.
  * PATCH /api/events/{eventId}/advances/{advanceNumber}/confirm
  * Body: {

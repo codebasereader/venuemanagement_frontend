@@ -19,6 +19,7 @@ import Vendorslist from "./pages/Vendorslist.jsx";
 import VendorDetailsPage from "./pages/VendorDetailsPage.jsx";
 import Daybookhome from "./pages/daybook/Daybookhome.jsx";
 import TargetHome from "./pages/target/TargetHome.jsx";
+import EmiHome from "./pages/emi/EmiHome.jsx";
 
 function LoginGuard() {
   const { is_logged_in, role } = useSelector((state) => state.user.value);
@@ -36,10 +37,22 @@ function RequireAuth() {
   return <Outlet />;
 }
 
+function RequireRole({ roles }) {
+  const { role } = useSelector((state) => state.user.value);
+  if (!roles.includes(role)) return <Navigate to="/" replace />;
+  return <Outlet />;
+}
+
 function DashboardIndex() {
   const { role } = useSelector((state) => state.user.value);
   if (role === ROLES.ADMIN) return <Navigate to="/users" replace />;
   return <Home />;
+}
+
+function CalendarPage() {
+  const { role } = useSelector((state) => state.user.value);
+  if (role === ROLES.ADMIN) return <Calendar />;
+  return <CalendarMonthly />;
 }
 
 export default function App() {
@@ -49,23 +62,38 @@ export default function App() {
       <Route path="/" element={<RequireAuth />}>
         <Route element={<DashboardLayout />}>
           <Route index element={<DashboardIndex />} />
-          <Route path="leads" element={<Leads />} />
-          <Route path="leads/:leadId" element={<LeadDetailsPage />} />
-          <Route path="vendors" element={<Vendorslist />} />
-          <Route path="vendors/:vendorId" element={<VendorDetailsPage />} />
-          <Route path="calendar" element={<CalendarMonthly />} />
-          <Route path="profile" element={<Outlet />}>
-            <Route index element={<Profile />} />
-            <Route path="venue" element={<VenueProfile />} />
-            <Route path="spaces" element={<ViewSpaces />} />
-            <Route path="pricing" element={<PricingHome />} />
-            <Route path="gallery" element={<GalleryHome />} />
+          <Route path="calendar" element={<CalendarPage />} />
+
+          {/* Owner + Incharge only */}
+          <Route
+            element={<RequireRole roles={[ROLES.OWNER, ROLES.INCHARGE]} />}
+          >
+            <Route path="leads" element={<Leads />} />
+            <Route path="leads/:leadId" element={<LeadDetailsPage />} />
+            <Route path="vendors" element={<Vendorslist />} />
+            <Route path="vendors/:vendorId" element={<VendorDetailsPage />} />
+            <Route path="profile" element={<Outlet />}>
+              <Route index element={<Profile />} />
+              <Route path="venue" element={<VenueProfile />} />
+              <Route path="spaces" element={<ViewSpaces />} />
+              <Route path="pricing" element={<PricingHome />} />
+              <Route path="gallery" element={<GalleryHome />} />
+            </Route>
           </Route>
-          <Route path="users" element={<ViewUsers />} />
-          <Route path="venues" element={<ViewVenues />} />
-          <Route path="calendar" element={<Calendar />} />
-          <Route path="daybook" element={<Daybookhome />} />
-          <Route path="target" element={<TargetHome />} />
+
+          {/* Owner only */}
+          <Route element={<RequireRole roles={[ROLES.OWNER]} />}>
+            <Route path="daybook" element={<Daybookhome />} />
+            <Route path="target" element={<TargetHome />} />
+            <Route path="emi" element={<EmiHome />} />
+          </Route>
+
+          {/* Admin only */}
+          <Route element={<RequireRole roles={[ROLES.ADMIN]} />}>
+            <Route path="users" element={<ViewUsers />} />
+            <Route path="venues" element={<ViewVenues />} />
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Route>
