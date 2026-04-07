@@ -102,8 +102,11 @@ function PlanRow({ row, idx, editMode, onCellChange }) {
         const expBiz = parseNum(durData.expectedBusiness);
         const expExp = parseNum(durData.expectedExpenses);
         const expProfit =
-          expBiz !== null || expExp !== null ? (expBiz ?? 0) - (expExp ?? 0) : null;
-        const actProfit = (durData.actualBusiness ?? 0) - (durData.actualExpenses ?? 0);
+          expBiz !== null || expExp !== null
+            ? (expBiz ?? 0) - (expExp ?? 0)
+            : null;
+        const actProfit =
+          (durData.actualBusiness ?? 0) - (durData.actualExpenses ?? 0);
         const isFirst = durIdx === 0;
         const isLast = durIdx === DURATIONS.length - 1;
         const bottomBorder = isLast ? "2px solid #d4cfc4" : "1px solid #f0ede8";
@@ -128,7 +131,11 @@ function PlanRow({ row, idx, editMode, onCellChange }) {
                 }}
               >
                 {!isVenueBuyout && (
-                  <span style={{ color: "#c5c2be", marginRight: 6, fontSize: 11 }}>└</span>
+                  <span
+                    style={{ color: "#c5c2be", marginRight: 6, fontSize: 11 }}
+                  >
+                    └
+                  </span>
                 )}
                 {row.spaceName}
               </td>
@@ -151,13 +158,26 @@ function PlanRow({ row, idx, editMode, onCellChange }) {
             </td>
 
             {/* Expected Bookings */}
-            <td style={{ ...TD_BASE, background: cellBg, borderBottom: bottomBorder }}>
+            <td
+              style={{
+                ...TD_BASE,
+                background: cellBg,
+                borderBottom: bottomBorder,
+              }}
+            >
               {editMode ? (
                 <input
                   type="number"
                   min="0"
                   value={durData.expectedBookings ?? ""}
-                  onChange={(e) => onCellChange(idx, dur.key, "expectedBookings", e.target.value)}
+                  onChange={(e) =>
+                    onCellChange(
+                      idx,
+                      dur.key,
+                      "expectedBookings",
+                      e.target.value,
+                    )
+                  }
                   style={inputStyle}
                   aria-label={`Expected bookings ${row.spaceName} ${dur.label}`}
                 />
@@ -167,13 +187,26 @@ function PlanRow({ row, idx, editMode, onCellChange }) {
             </td>
 
             {/* Expected Business */}
-            <td style={{ ...TD_BASE, background: cellBg, borderBottom: bottomBorder }}>
+            <td
+              style={{
+                ...TD_BASE,
+                background: cellBg,
+                borderBottom: bottomBorder,
+              }}
+            >
               {editMode ? (
                 <input
                   type="number"
                   min="0"
                   value={durData.expectedBusiness ?? ""}
-                  onChange={(e) => onCellChange(idx, dur.key, "expectedBusiness", e.target.value)}
+                  onChange={(e) =>
+                    onCellChange(
+                      idx,
+                      dur.key,
+                      "expectedBusiness",
+                      e.target.value,
+                    )
+                  }
                   style={inputStyle}
                   aria-label={`Expected business ${row.spaceName} ${dur.label}`}
                 />
@@ -183,13 +216,26 @@ function PlanRow({ row, idx, editMode, onCellChange }) {
             </td>
 
             {/* Expected Expenses */}
-            <td style={{ ...TD_BASE, background: cellBg, borderBottom: bottomBorder }}>
+            <td
+              style={{
+                ...TD_BASE,
+                background: cellBg,
+                borderBottom: bottomBorder,
+              }}
+            >
               {editMode ? (
                 <input
                   type="number"
                   min="0"
                   value={durData.expectedExpenses ?? ""}
-                  onChange={(e) => onCellChange(idx, dur.key, "expectedExpenses", e.target.value)}
+                  onChange={(e) =>
+                    onCellChange(
+                      idx,
+                      dur.key,
+                      "expectedExpenses",
+                      e.target.value,
+                    )
+                  }
                   style={inputStyle}
                   aria-label={`Expected expenses ${row.spaceName} ${dur.label}`}
                 />
@@ -213,16 +259,29 @@ function PlanRow({ row, idx, editMode, onCellChange }) {
             </td>
 
             {/* Actual Bookings */}
-            <td style={{ ...TD_BASE, borderBottom: bottomBorder }}>{fmtNum(durData.actualBookings)}</td>
+            <td style={{ ...TD_BASE, borderBottom: bottomBorder }}>
+              {fmtNum(durData.actualBookings)}
+            </td>
 
             {/* Actual Business */}
-            <td style={{ ...TD_BASE, borderBottom: bottomBorder }}>{fmtCurrency(durData.actualBusiness)}</td>
+            <td style={{ ...TD_BASE, borderBottom: bottomBorder }}>
+              {fmtCurrency(durData.actualBusiness)}
+            </td>
 
             {/* Actual Expenses */}
-            <td style={{ ...TD_BASE, borderBottom: bottomBorder }}>{fmtCurrency(durData.actualExpenses)}</td>
+            <td style={{ ...TD_BASE, borderBottom: bottomBorder }}>
+              {fmtCurrency(durData.actualExpenses)}
+            </td>
 
             {/* Actual Profits — auto-computed */}
-            <td style={{ ...TD_BASE, fontWeight: 600, color: profitColor(actProfit), borderBottom: bottomBorder }}>
+            <td
+              style={{
+                ...TD_BASE,
+                fontWeight: 600,
+                color: profitColor(actProfit),
+                borderBottom: bottomBorder,
+              }}
+            >
               {fmtCurrency(actProfit)}
             </td>
           </tr>

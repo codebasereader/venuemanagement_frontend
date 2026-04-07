@@ -139,8 +139,11 @@ function SpaceCard({ row, idx, editMode, onCellChange }) {
         const expBiz = parseNum(durData.expectedBusiness);
         const expExp = parseNum(durData.expectedExpenses);
         const expProfit =
-          expBiz !== null || expExp !== null ? (expBiz ?? 0) - (expExp ?? 0) : null;
-        const actProfit = (durData.actualBusiness ?? 0) - (durData.actualExpenses ?? 0);
+          expBiz !== null || expExp !== null
+            ? (expBiz ?? 0) - (expExp ?? 0)
+            : null;
+        const actProfit =
+          (durData.actualBusiness ?? 0) - (durData.actualExpenses ?? 0);
 
         return (
           <div
@@ -148,7 +151,8 @@ function SpaceCard({ row, idx, editMode, onCellChange }) {
             style={{
               marginBottom: durIdx < DURATIONS.length - 1 ? 12 : 0,
               paddingBottom: durIdx < DURATIONS.length - 1 ? 12 : 0,
-              borderBottom: durIdx < DURATIONS.length - 1 ? "1px dashed #ece9e4" : "none",
+              borderBottom:
+                durIdx < DURATIONS.length - 1 ? "1px dashed #ece9e4" : "none",
             }}
           >
             {/* Duration label */}
@@ -166,7 +170,13 @@ function SpaceCard({ row, idx, editMode, onCellChange }) {
               {dur.label}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 8,
+              }}
+            >
               {/* Expected */}
               <div
                 style={{
@@ -251,9 +261,24 @@ function SpaceCard({ row, idx, editMode, onCellChange }) {
                 >
                   Actual
                 </div>
-                <StatRow label="Bookings" value={fmtNum(durData.actualBookings)} isEditable={false} editMode={false} />
-                <StatRow label="Business" value={fmtCurrency(durData.actualBusiness)} isEditable={false} editMode={false} />
-                <StatRow label="Expenses" value={fmtCurrency(durData.actualExpenses)} isEditable={false} editMode={false} />
+                <StatRow
+                  label="Bookings"
+                  value={fmtNum(durData.actualBookings)}
+                  isEditable={false}
+                  editMode={false}
+                />
+                <StatRow
+                  label="Business"
+                  value={fmtCurrency(durData.actualBusiness)}
+                  isEditable={false}
+                  editMode={false}
+                />
+                <StatRow
+                  label="Expenses"
+                  value={fmtCurrency(durData.actualExpenses)}
+                  isEditable={false}
+                  editMode={false}
+                />
                 <StatRow
                   label="Profits"
                   value={fmtCurrency(actProfit)}

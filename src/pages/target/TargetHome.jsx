@@ -155,9 +155,12 @@ export default function TargetHome() {
             DURATIONS.map(({ key }) => [
               key,
               {
-                expectedBookings: parseNum(r.durations?.[key]?.expectedBookings) ?? 0,
-                expectedBusiness: parseNum(r.durations?.[key]?.expectedBusiness) ?? 0,
-                expectedExpenses: parseNum(r.durations?.[key]?.expectedExpenses) ?? 0,
+                expectedBookings:
+                  parseNum(r.durations?.[key]?.expectedBookings) ?? 0,
+                expectedBusiness:
+                  parseNum(r.durations?.[key]?.expectedBusiness) ?? 0,
+                expectedExpenses:
+                  parseNum(r.durations?.[key]?.expectedExpenses) ?? 0,
               },
             ]),
           ),
