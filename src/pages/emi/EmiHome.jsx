@@ -186,7 +186,7 @@ export default function EmiHome() {
             lineHeight: 1.2,
           }}
         >
-          EMI Tracker
+          EMI/Bills Tracker
         </h1>
         <p
           style={{

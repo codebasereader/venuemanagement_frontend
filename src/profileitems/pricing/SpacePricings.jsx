@@ -1,10 +1,10 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import BuyoutOnlyToggle from "./BuyoutOnlyToggle";
 import RackRatesSection from "./RackRatesSection";
 import InclusionsSection from "./InclusionsSection";
 import AddonsSection from "./AddonsSection";
 
-const defaultRates = { "12": "", "24": "", "36": "", "48": "" };
+const defaultRates = { 12: "", 24: "", 36: "", 48: "" };
 
 function getDefaultSpacePricing() {
   return {
@@ -23,9 +23,18 @@ export default function SpacePricings({
   onSave,
   saving = false,
 }) {
-  const [selectedSpaceId, setSelectedSpaceId] = useState(spaces[0]?.id ?? null);
+  const [selectedSpaceId, setSelectedSpaceId] = useState(null);
 
-  const currentPricing = selectedSpaceId ? (spacePricings[selectedSpaceId] ?? getDefaultSpacePricing()) : null;
+  // Auto-select the first space once spaces load from the API
+  useEffect(() => {
+    if (!selectedSpaceId && spaces.length > 0) {
+      setSelectedSpaceId(spaces[0].id);
+    }
+  }, [spaces, selectedSpaceId]);
+
+  const currentPricing = selectedSpaceId
+    ? (spacePricings[selectedSpaceId] ?? getDefaultSpacePricing())
+    : null;
 
   const updateCurrentSpacePricing = useCallback(
     (patch) => {
@@ -39,7 +48,7 @@ export default function SpacePricings({
         },
       });
     },
-    [selectedSpaceId, spacePricings, onSpacePricingsChange]
+    [selectedSpaceId, spacePricings, onSpacePricingsChange],
   );
 
   const handleSave = useCallback(() => {
@@ -73,7 +82,8 @@ export default function SpacePricings({
             color: "#6b6966",
           }}
         >
-          No spaces added yet. Add spaces in the Spaces section to set per-space pricing.
+          No spaces added yet. Add spaces in the Spaces section to set per-space
+          pricing.
         </div>
       ) : (
         <>
@@ -89,7 +99,9 @@ export default function SpacePricings({
             >
               Select space
             </h2>
-            <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#6b6966" }}>
+            <p
+              style={{ margin: "0 0 12px", fontSize: "13px", color: "#6b6966" }}
+            >
               Configure rack rates, inclusions and add-ons for each space.
             </p>
             <div
@@ -107,8 +119,12 @@ export default function SpacePricings({
                   style={{
                     padding: "12px 18px",
                     borderRadius: "12px",
-                    border: selectedSpaceId === space.id ? "2px solid #c9a84c" : "1px solid #e8e6e2",
-                    background: selectedSpaceId === space.id ? "#fdf6e8" : "white",
+                    border:
+                      selectedSpaceId === space.id
+                        ? "2px solid #c9a84c"
+                        : "1px solid #e8e6e2",
+                    background:
+                      selectedSpaceId === space.id ? "#fdf6e8" : "white",
                     color: "#1a1917",
                     fontFamily: "'DM Sans', sans-serif",
                     fontSize: "14px",
@@ -127,11 +143,15 @@ export default function SpacePricings({
             <>
               <RackRatesSection
                 rates={currentPricing.rackRates ?? defaultRates}
-                onChange={(rackRates) => updateCurrentSpacePricing({ rackRates })}
+                onChange={(rackRates) =>
+                  updateCurrentSpacePricing({ rackRates })
+                }
               />
               <InclusionsSection
                 items={currentPricing.inclusions ?? []}
-                onChange={(inclusions) => updateCurrentSpacePricing({ inclusions })}
+                onChange={(inclusions) =>
+                  updateCurrentSpacePricing({ inclusions })
+                }
               />
               <AddonsSection
                 items={currentPricing.addons ?? []}
@@ -141,7 +161,13 @@ export default function SpacePricings({
           )}
 
           {onSave && spaces.length > 0 && (
-            <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end" }}>
+            <div
+              style={{
+                marginTop: "24px",
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
               <button
                 type="button"
                 onClick={handleSave}
@@ -162,7 +188,14 @@ export default function SpacePricings({
                   boxShadow: "0 2px 8px rgba(201, 168, 76, 0.3)",
                 }}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
                   <polyline points="17 21 17 13 7 13 7 21" />
                   <polyline points="7 3 7 8 15 8" />

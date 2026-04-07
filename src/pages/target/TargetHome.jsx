@@ -9,6 +9,7 @@ import {
 import {
   CURRENT_MONTH,
   CURRENT_YEAR,
+  DURATIONS,
   mergeRowsWithApiData,
   parseNum,
 } from "./utils/targetHelpers";
@@ -111,9 +112,22 @@ export default function TargetHome() {
 
   // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  const handleCellChange = (idx, field, value) => {
+  const handleCellChange = (idx, durationKey, field, value) => {
     setDraftRows((prev) =>
-      prev.map((row, i) => (i === idx ? { ...row, [field]: value } : row)),
+      prev.map((row, i) =>
+        i === idx
+          ? {
+              ...row,
+              durations: {
+                ...row.durations,
+                [durationKey]: {
+                  ...row.durations?.[durationKey],
+                  [field]: value,
+                },
+              },
+            }
+          : row,
+      ),
     );
   };
 
@@ -137,9 +151,16 @@ export default function TargetHome() {
           rowType: r.rowType,
           spaceId: r.spaceId || null,
           spaceName: r.spaceName,
-          expectedBookings: parseNum(r.expectedBookings) ?? 0,
-          expectedBusiness: parseNum(r.expectedBusiness) ?? 0,
-          expectedExpenses: parseNum(r.expectedExpenses) ?? 0,
+          durations: Object.fromEntries(
+            DURATIONS.map(({ key }) => [
+              key,
+              {
+                expectedBookings: parseNum(r.durations?.[key]?.expectedBookings) ?? 0,
+                expectedBusiness: parseNum(r.durations?.[key]?.expectedBusiness) ?? 0,
+                expectedExpenses: parseNum(r.durations?.[key]?.expectedExpenses) ?? 0,
+              },
+            ]),
+          ),
         })),
       };
       const data = await upsertMonthlyPlan(accessToken, venueId, payload);

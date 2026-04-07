@@ -12,14 +12,23 @@ import {
 import { listVenues } from "../../api/venue";
 
 const ChevronLeftIcon = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <polyline points="15 18 9 12 15 6" />
   </svg>
 );
 
 const TAB_KEYS = { VENUE: "venue", SPACE: "space" };
 
-const DEFAULT_RACK_RATES = { "12": "", "24": "", "36": "", "48": "" };
+const DEFAULT_RACK_RATES = { 12: "", 24: "", 36: "", 48: "" };
 
 function makeId() {
   return `id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -100,24 +109,28 @@ function normalizePricingResponse(data) {
   };
 }
 
-/** Build API payload for venue-buyout (no id on inclusions/addons). */
+/** Build API payload for venue-buyout. */
 function toApiVenueBuyout(data) {
   return {
     buyoutOnly: Boolean(data.buyoutOnly),
     rackRates: { ...DEFAULT_RACK_RATES, ...(data.rackRates ?? {}) },
     inclusions: (data.inclusions ?? []).map((i) => ({
+      id: i?.id,
       name: (i?.name ?? "").trim(),
-      ...(i?.maxQuantity != null && i.maxQuantity !== "" && { maxQuantity: Number(i.maxQuantity) }),
+      ...(i?.maxQuantity != null &&
+        i.maxQuantity !== "" && { maxQuantity: Number(i.maxQuantity) }),
     })),
     addons: (data.addons ?? []).map((i) => ({
+      id: i?.id,
       name: (i?.name ?? "").trim(),
-      ...(i?.maxQuantity != null && i.maxQuantity !== "" && { maxQuantity: Number(i.maxQuantity) }),
+      ...(i?.maxQuantity != null &&
+        i.maxQuantity !== "" && { maxQuantity: Number(i.maxQuantity) }),
       prices: { ...DEFAULT_RACK_RATES, ...(i?.prices ?? {}) },
     })),
   };
 }
 
-/** Build API payload for space-buyout (no id on nested inclusions/addons). */
+/** Build API payload for space-buyout. */
 function toApiSpaceBuyout(data) {
   const spacePricings = {};
   const raw = data.spacePricings ?? {};
@@ -126,12 +139,16 @@ function toApiSpaceBuyout(data) {
     spacePricings[spaceId] = {
       rackRates: { ...DEFAULT_RACK_RATES, ...(sp.rackRates ?? {}) },
       inclusions: (sp.inclusions ?? []).map((i) => ({
+        id: i?.id,
         name: (i?.name ?? "").trim(),
-        ...(i?.maxQuantity != null && i.maxQuantity !== "" && { maxQuantity: Number(i.maxQuantity) }),
+        ...(i?.maxQuantity != null &&
+          i.maxQuantity !== "" && { maxQuantity: Number(i.maxQuantity) }),
       })),
       addons: (sp.addons ?? []).map((i) => ({
+        id: i?.id,
         name: (i?.name ?? "").trim(),
-        ...(i?.maxQuantity != null && i.maxQuantity !== "" && { maxQuantity: Number(i.maxQuantity) }),
+        ...(i?.maxQuantity != null &&
+          i.maxQuantity !== "" && { maxQuantity: Number(i.maxQuantity) }),
         prices: { ...DEFAULT_RACK_RATES, ...(i?.prices ?? {}) },
       })),
     };
@@ -144,7 +161,11 @@ function toApiSpaceBuyout(data) {
 
 export default function PricingHome() {
   const navigate = useNavigate();
-  const { access_token: accessToken, role, venueId: myVenueId } = useSelector((s) => s.user.value);
+  const {
+    access_token: accessToken,
+    role,
+    venueId: myVenueId,
+  } = useSelector((s) => s.user.value);
   const isAdmin = role === "admin";
 
   const [activeTab, setActiveTab] = useState(TAB_KEYS.VENUE);
@@ -178,7 +199,8 @@ export default function PricingHome() {
           label: v.name ?? v._id ?? v.id,
         }));
         setVenueOptions(opts);
-        if (!selectedVenueId && opts[0]?.value) setSelectedVenueId(opts[0].value);
+        if (!selectedVenueId && opts[0]?.value)
+          setSelectedVenueId(opts[0].value);
       })
       .catch(() => setVenueOptions([]));
   }, [accessToken, isAdmin, selectedVenueId]);
@@ -203,7 +225,11 @@ export default function PricingHome() {
       else if (norm.buyoutOnly) setActiveTab(TAB_KEYS.VENUE);
       else setActiveTab(TAB_KEYS.VENUE);
     } catch (err) {
-      message.error(err?.response?.data?.message ?? err?.message ?? "Failed to load pricing");
+      message.error(
+        err?.response?.data?.message ??
+          err?.message ??
+          "Failed to load pricing",
+      );
     } finally {
       setLoading(false);
     }
@@ -225,11 +251,17 @@ export default function PricingHome() {
       }
       setSavingVenue(true);
       try {
-        await patchVenueBuyout(accessToken, effectiveVenueId, toApiVenueBuyout(data));
+        await patchVenueBuyout(
+          accessToken,
+          effectiveVenueId,
+          toApiVenueBuyout(data),
+        );
         message.success("Venue buyout pricing saved");
         fetchPricing();
       } catch (err) {
-        message.error(err?.response?.data?.message ?? err?.message ?? "Failed to save");
+        message.error(
+          err?.response?.data?.message ?? err?.message ?? "Failed to save",
+        );
       } finally {
         setSavingVenue(false);
       }
@@ -245,11 +277,17 @@ export default function PricingHome() {
       }
       setSavingSpace(true);
       try {
-        await patchSpaceBuyout(accessToken, effectiveVenueId, toApiSpaceBuyout(data));
+        await patchSpaceBuyout(
+          accessToken,
+          effectiveVenueId,
+          toApiSpaceBuyout(data),
+        );
         message.success("Space buyout pricing saved");
         fetchPricing();
       } catch (err) {
-        message.error(err?.response?.data?.message ?? err?.message ?? "Failed to save");
+        message.error(
+          err?.response?.data?.message ?? err?.message ?? "Failed to save",
+        );
       } finally {
         setSavingSpace(false);
       }
@@ -337,12 +375,18 @@ export default function PricingHome() {
         </div>
 
         {loading ? (
-          <div style={{ padding: "40px", textAlign: "center", color: "#6b6966" }}>
+          <div
+            style={{ padding: "40px", textAlign: "center", color: "#6b6966" }}
+          >
             Loading pricing…
           </div>
         ) : !effectiveVenueId ? (
-          <div style={{ padding: "40px", textAlign: "center", color: "#6b6966" }}>
-            {isAdmin ? "Select a venue to manage pricing." : "No venue assigned."}
+          <div
+            style={{ padding: "40px", textAlign: "center", color: "#6b6966" }}
+          >
+            {isAdmin
+              ? "Select a venue to manage pricing."
+              : "No venue assigned."}
           </div>
         ) : (
           <>
@@ -357,14 +401,23 @@ export default function PricingHome() {
             >
               <button
                 type="button"
-                onClick={() => !venueTabDisabled && setActiveTab(TAB_KEYS.VENUE)}
+                onClick={() =>
+                  !venueTabDisabled && setActiveTab(TAB_KEYS.VENUE)
+                }
                 disabled={venueTabDisabled}
                 style={{
                   padding: "12px 20px",
                   border: "none",
-                  borderBottom: activeTab === TAB_KEYS.VENUE ? "2px solid #c9a84c" : "2px solid transparent",
+                  borderBottom:
+                    activeTab === TAB_KEYS.VENUE
+                      ? "2px solid #c9a84c"
+                      : "2px solid transparent",
                   background: "none",
-                  color: venueTabDisabled ? "#c5c2be" : activeTab === TAB_KEYS.VENUE ? "#1a1917" : "#6b6966",
+                  color: venueTabDisabled
+                    ? "#c5c2be"
+                    : activeTab === TAB_KEYS.VENUE
+                      ? "#1a1917"
+                      : "#6b6966",
                   fontFamily: "'DM Sans', sans-serif",
                   fontSize: "15px",
                   fontWeight: 600,
@@ -377,14 +430,23 @@ export default function PricingHome() {
               </button>
               <button
                 type="button"
-                onClick={() => !spaceTabDisabled && setActiveTab(TAB_KEYS.SPACE)}
+                onClick={() =>
+                  !spaceTabDisabled && setActiveTab(TAB_KEYS.SPACE)
+                }
                 disabled={spaceTabDisabled}
                 style={{
                   padding: "12px 20px",
                   border: "none",
-                  borderBottom: activeTab === TAB_KEYS.SPACE ? "2px solid #c9a84c" : "2px solid transparent",
+                  borderBottom:
+                    activeTab === TAB_KEYS.SPACE
+                      ? "2px solid #c9a84c"
+                      : "2px solid transparent",
                   background: "none",
-                  color: spaceTabDisabled ? "#c5c2be" : activeTab === TAB_KEYS.SPACE ? "#1a1917" : "#6b6966",
+                  color: spaceTabDisabled
+                    ? "#c5c2be"
+                    : activeTab === TAB_KEYS.SPACE
+                      ? "#1a1917"
+                      : "#6b6966",
                   fontFamily: "'DM Sans', sans-serif",
                   fontSize: "15px",
                   fontWeight: 600,

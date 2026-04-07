@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import {
   calcMonthlyTotals,
+  DURATIONS,
   fmtCurrency,
   fmtNum,
   parseNum,
@@ -24,6 +25,7 @@ function StatRow({
   editMode,
   field,
   rowIdx,
+  durKey,
   onCellChange,
   rawValue,
   isEditable,
@@ -55,7 +57,7 @@ function StatRow({
           type="number"
           min="0"
           value={rawValue}
-          onChange={(e) => onCellChange(rowIdx, field, e.target.value)}
+          onChange={(e) => onCellChange(rowIdx, durKey, field, e.target.value)}
           style={{ ...inputStyle, minWidth: 70, maxWidth: 120 }}
         />
       ) : (
@@ -77,12 +79,6 @@ function StatRow({
 
 function SpaceCard({ row, idx, editMode, onCellChange }) {
   const isVenueBuyout = row.rowType === "venue_buyout";
-
-  const expBiz = parseNum(row.expectedBusiness);
-  const expExp = parseNum(row.expectedExpenses);
-  const expProfit =
-    expBiz !== null || expExp !== null ? (expBiz ?? 0) - (expExp ?? 0) : null;
-  const actProfit = (row.actualBusiness ?? 0) - (row.actualExpenses ?? 0);
 
   return (
     <div
@@ -137,116 +133,139 @@ function SpaceCard({ row, idx, editMode, onCellChange }) {
         )}
       </div>
 
-      {/* Two-column layout: expected | actual */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        {/* Expected */}
-        <div
-          style={{
-            background: editMode ? "#fffdf7" : "#faf8f5",
-            borderRadius: 8,
-            padding: "10px 12px",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: FONT,
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#b8935a",
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
-              marginBottom: 8,
-            }}
-          >
-            Expected
-          </div>
-          <StatRow
-            label="Bookings"
-            value={fmtNum(row.expectedBookings)}
-            rawValue={row.expectedBookings}
-            field="expectedBookings"
-            rowIdx={idx}
-            editMode={editMode}
-            onCellChange={onCellChange}
-            isEditable
-          />
-          <StatRow
-            label="Business"
-            value={fmtCurrency(row.expectedBusiness)}
-            rawValue={row.expectedBusiness}
-            field="expectedBusiness"
-            rowIdx={idx}
-            editMode={editMode}
-            onCellChange={onCellChange}
-            isEditable
-          />
-          <StatRow
-            label="Expenses"
-            value={fmtCurrency(row.expectedExpenses)}
-            rawValue={row.expectedExpenses}
-            field="expectedExpenses"
-            rowIdx={idx}
-            editMode={editMode}
-            onCellChange={onCellChange}
-            isEditable
-          />
-          <StatRow
-            label="Profits"
-            value={expProfit === null ? "—" : fmtCurrency(expProfit)}
-            valueColor={profitColor(expProfit)}
-            isEditable={false}
-            editMode={false}
-          />
-        </div>
+      {/* Per-duration sections */}
+      {DURATIONS.map((dur, durIdx) => {
+        const durData = row.durations?.[dur.key] ?? {};
+        const expBiz = parseNum(durData.expectedBusiness);
+        const expExp = parseNum(durData.expectedExpenses);
+        const expProfit =
+          expBiz !== null || expExp !== null ? (expBiz ?? 0) - (expExp ?? 0) : null;
+        const actProfit = (durData.actualBusiness ?? 0) - (durData.actualExpenses ?? 0);
 
-        {/* Actual */}
-        <div
-          style={{
-            background: "#f4fdf8",
-            borderRadius: 8,
-            padding: "10px 12px",
-          }}
-        >
+        return (
           <div
+            key={dur.key}
             style={{
-              fontFamily: FONT,
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#16875f",
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
-              marginBottom: 8,
+              marginBottom: durIdx < DURATIONS.length - 1 ? 12 : 0,
+              paddingBottom: durIdx < DURATIONS.length - 1 ? 12 : 0,
+              borderBottom: durIdx < DURATIONS.length - 1 ? "1px dashed #ece9e4" : "none",
             }}
           >
-            Actual
+            {/* Duration label */}
+            <div
+              style={{
+                fontFamily: FONT,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#c9a84c",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                marginBottom: 8,
+              }}
+            >
+              {dur.label}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {/* Expected */}
+              <div
+                style={{
+                  background: editMode ? "#fffdf7" : "#faf8f5",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#b8935a",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    marginBottom: 6,
+                  }}
+                >
+                  Expected
+                </div>
+                <StatRow
+                  label="Bookings"
+                  value={fmtNum(durData.expectedBookings)}
+                  rawValue={durData.expectedBookings}
+                  field="expectedBookings"
+                  rowIdx={idx}
+                  durKey={dur.key}
+                  editMode={editMode}
+                  onCellChange={onCellChange}
+                  isEditable
+                />
+                <StatRow
+                  label="Business"
+                  value={fmtCurrency(durData.expectedBusiness)}
+                  rawValue={durData.expectedBusiness}
+                  field="expectedBusiness"
+                  rowIdx={idx}
+                  durKey={dur.key}
+                  editMode={editMode}
+                  onCellChange={onCellChange}
+                  isEditable
+                />
+                <StatRow
+                  label="Expenses"
+                  value={fmtCurrency(durData.expectedExpenses)}
+                  rawValue={durData.expectedExpenses}
+                  field="expectedExpenses"
+                  rowIdx={idx}
+                  durKey={dur.key}
+                  editMode={editMode}
+                  onCellChange={onCellChange}
+                  isEditable
+                />
+                <StatRow
+                  label="Profits"
+                  value={expProfit === null ? "\u2014" : fmtCurrency(expProfit)}
+                  valueColor={profitColor(expProfit)}
+                  isEditable={false}
+                  editMode={false}
+                />
+              </div>
+
+              {/* Actual */}
+              <div
+                style={{
+                  background: "#f4fdf8",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#16875f",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    marginBottom: 6,
+                  }}
+                >
+                  Actual
+                </div>
+                <StatRow label="Bookings" value={fmtNum(durData.actualBookings)} isEditable={false} editMode={false} />
+                <StatRow label="Business" value={fmtCurrency(durData.actualBusiness)} isEditable={false} editMode={false} />
+                <StatRow label="Expenses" value={fmtCurrency(durData.actualExpenses)} isEditable={false} editMode={false} />
+                <StatRow
+                  label="Profits"
+                  value={fmtCurrency(actProfit)}
+                  valueColor={profitColor(actProfit)}
+                  isEditable={false}
+                  editMode={false}
+                />
+              </div>
+            </div>
           </div>
-          <StatRow
-            label="Bookings"
-            value={fmtNum(row.actualBookings)}
-            isEditable={false}
-            editMode={false}
-          />
-          <StatRow
-            label="Business"
-            value={fmtCurrency(row.actualBusiness)}
-            isEditable={false}
-            editMode={false}
-          />
-          <StatRow
-            label="Expenses"
-            value={fmtCurrency(row.actualExpenses)}
-            isEditable={false}
-            editMode={false}
-          />
-          <StatRow
-            label="Profits"
-            value={fmtCurrency(actProfit)}
-            valueColor={profitColor(actProfit)}
-            isEditable={false}
-            editMode={false}
-          />
-        </div>
-      </div>
+        );
+      })}
     </div>
   );
 }

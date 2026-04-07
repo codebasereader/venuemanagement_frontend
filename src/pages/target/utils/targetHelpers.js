@@ -22,6 +22,30 @@ export const YEAR_OPTIONS = Array.from(
   (_, i) => CURRENT_YEAR - 3 + i,
 );
 
+// ─── Duration constants ────────────────────────────────────────────────────────
+
+export const DURATIONS = [
+  { key: "12", label: "Half Day" },
+  { key: "24", label: "Full Day" },
+  { key: "36", label: "1.5 Day" },
+  { key: "48", label: "2 Days" },
+];
+
+function emptyDurationSlot() {
+  return {
+    expectedBookings: "",
+    expectedBusiness: "",
+    expectedExpenses: "",
+    actualBookings: 0,
+    actualBusiness: 0,
+    actualExpenses: 0,
+  };
+}
+
+export function emptyDurations() {
+  return Object.fromEntries(DURATIONS.map((d) => [d.key, emptyDurationSlot()]));
+}
+
 // ─── Formatting ───────────────────────────────────────────────────────────────
 
 export function parseNum(v) {
@@ -51,82 +75,58 @@ export function profitColor(val) {
 
 /**
  * Build plan rows from the full monthly-plan API response object.
- * Spaces come from data.spaces (which carry per-space actual booking data).
- * "Complete Venue Buyout" actuals = totals - sum of all space actuals.
- * Expected values are read from data.rows (saved plan rows).
+ * Each row contains a `durations` map keyed by "12"|"24"|"36"|"48".
+ * The API `rows` array already contains per-duration expected and actual data
+ * for both venue_buyout and space rows, so we use it directly.
  */
 export function mergeRowsWithApiData(apiData) {
-  const rows = [];
-  const savedRows = apiData?.rows ?? [];
-  const apiSpaces = apiData?.spaces ?? [];
-  const totals = apiData?.totals ?? {};
+  const apiRows = apiData?.rows ?? [];
 
-  // Venue-buyout actuals = grand total minus all individual space actuals
-  const spacesActualBookings = apiSpaces.reduce(
-    (s, sp) => s + (sp.actualBookings ?? 0),
-    0,
-  );
-  const spacesActualBusiness = apiSpaces.reduce(
-    (s, sp) => s + (sp.actualBusiness ?? 0),
-    0,
-  );
-  const spacesActualExpenses = apiSpaces.reduce(
-    (s, sp) => s + (sp.actualExpenses ?? 0),
-    0,
-  );
-
-  const vbRow = savedRows.find((r) => r.rowType === "venue_buyout");
-  rows.push({
-    rowType: "venue_buyout",
-    spaceId: null,
-    spaceName: "Complete Venue Buyout",
-    expectedBookings: vbRow?.expectedBookings ?? "",
-    expectedBusiness: vbRow?.expectedBusiness ?? "",
-    expectedExpenses: vbRow?.expectedExpenses ?? "",
-    actualBookings: (totals.actualBookings ?? 0) - spacesActualBookings,
-    actualBusiness: (totals.actualBusiness ?? 0) - spacesActualBusiness,
-    actualExpenses: (totals.actualExpenses ?? 0) - spacesActualExpenses,
+  return apiRows.map((row) => {
+    const durations = {};
+    for (const { key } of DURATIONS) {
+      const dur = row.durations?.[key] ?? {};
+      durations[key] = {
+        expectedBookings: dur.expectedBookings ?? "",
+        expectedBusiness: dur.expectedBusiness ?? "",
+        expectedExpenses: dur.expectedExpenses ?? "",
+        actualBookings: dur.actualBookings ?? 0,
+        actualBusiness: dur.actualBusiness ?? 0,
+        actualExpenses: dur.actualExpenses ?? 0,
+      };
+    }
+    return {
+      rowType: row.rowType,
+      spaceId: row.spaceId ?? null,
+      spaceName:
+        row.spaceName ||
+        (row.rowType === "venue_buyout"
+          ? "Complete Venue Buyout"
+          : "Unnamed Space"),
+      durations,
+    };
   });
-
-  for (const space of apiSpaces) {
-    const savedRow = savedRows.find(
-      (r) =>
-        r.spaceId && r.spaceId.toString() === (space.spaceId ?? "").toString(),
-    );
-    rows.push({
-      rowType: "space",
-      spaceId: space.spaceId,
-      spaceName: space.spaceName || "Unnamed Space",
-      expectedBookings: savedRow?.expectedBookings ?? "",
-      expectedBusiness: savedRow?.expectedBusiness ?? "",
-      expectedExpenses: savedRow?.expectedExpenses ?? "",
-      actualBookings: space.actualBookings ?? 0,
-      actualBusiness: space.actualBusiness ?? 0,
-      actualExpenses: space.actualExpenses ?? 0,
-    });
-  }
-
-  return rows;
 }
 
 // ─── Totals calculators ───────────────────────────────────────────────────────
 
+function sumAllDurationsField(rows, field) {
+  return rows.reduce((total, row) => {
+    for (const { key } of DURATIONS) {
+      const v = row.durations?.[key]?.[field];
+      total += field.startsWith("expected") ? (parseNum(v) ?? 0) : (v ?? 0);
+    }
+    return total;
+  }, 0);
+}
+
 export function calcMonthlyTotals(rows) {
-  const expBk = rows.reduce(
-    (s, r) => s + (parseNum(r.expectedBookings) ?? 0),
-    0,
-  );
-  const expBiz = rows.reduce(
-    (s, r) => s + (parseNum(r.expectedBusiness) ?? 0),
-    0,
-  );
-  const expExp = rows.reduce(
-    (s, r) => s + (parseNum(r.expectedExpenses) ?? 0),
-    0,
-  );
-  const actBk = rows.reduce((s, r) => s + (r.actualBookings ?? 0), 0);
-  const actBiz = rows.reduce((s, r) => s + (r.actualBusiness ?? 0), 0);
-  const actExp = rows.reduce((s, r) => s + (r.actualExpenses ?? 0), 0);
+  const expBk = sumAllDurationsField(rows, "expectedBookings");
+  const expBiz = sumAllDurationsField(rows, "expectedBusiness");
+  const expExp = sumAllDurationsField(rows, "expectedExpenses");
+  const actBk = sumAllDurationsField(rows, "actualBookings");
+  const actBiz = sumAllDurationsField(rows, "actualBusiness");
+  const actExp = sumAllDurationsField(rows, "actualExpenses");
   return {
     expectedBookings: expBk,
     expectedBusiness: expBiz,

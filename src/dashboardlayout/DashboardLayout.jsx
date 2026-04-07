@@ -235,7 +235,7 @@ const ownerNavItems = [
   { path: "/calendar", label: "Calendar", icon: CalendarIcon },
   { path: "/daybook", label: "Daybook", icon: DaybookIcon },
   { path: "/target", label: "Target", icon: TargetIcon },
-  { path: "/emi", label: "EMI Tracker", icon: EmiIcon },
+  { path: "/emi", label: "EMI/Bills Tracker", icon: EmiIcon },
   { path: "/profile", label: "Profile", icon: ProfileIcon },
 ];
 

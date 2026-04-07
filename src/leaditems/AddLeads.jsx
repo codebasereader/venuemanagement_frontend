@@ -63,10 +63,10 @@ const EVENT_TYPES = [
 ];
 
 const DURATIONS = [
-  { value: 12, label: "12 hours" },
-  { value: 24, label: "24 hours" },
-  { value: 36, label: "36 hours" },
-  { value: 48, label: "48 hours" },
+  { value: 12, label: "Half Day" },
+  { value: 24, label: "Full Day" },
+  { value: 36, label: "1.5 Day" },
+  { value: 48, label: "2 Days" },
 ];
 
 const EVENT_STATUSES = [
@@ -234,6 +234,10 @@ export function buildLeadPayload(form) {
       companyName: (form.companyName || "").trim() || undefined,
       phone: normalizePhone(form.phone),
       altPhone: form.altPhone ? normalizePhone(form.altPhone) : undefined,
+      referredBy: (form.referredBy || "").trim() || undefined,
+      referredByPhone: form.referredByPhone
+        ? normalizePhone(form.referredByPhone)
+        : undefined,
     },
   };
 
@@ -252,10 +256,9 @@ export function leadToInitialValues(lead) {
     rawMeetings.length > 0
       ? rawMeetings.map((m, i) => ({
           id: m._id || m.id || `m-${i}-${Date.now()}`,
-          meetingAt:
-            m.meetingAt
-              ? new Date(m.meetingAt).toISOString().slice(0, 16)
-              : "",
+          meetingAt: m.meetingAt
+            ? new Date(m.meetingAt).toISOString().slice(0, 16)
+            : "",
           notes: m.notes ?? "",
         }))
       : [newMeetingRow()];
@@ -293,6 +296,8 @@ export function leadToInitialValues(lead) {
     companyName: c.companyName ?? "",
     phone: c.phone ?? "",
     altPhone: c.altPhone ?? "",
+    referredBy: c.referredBy ?? "",
+    referredByPhone: c.referredByPhone ?? "",
   };
 }
 
@@ -300,7 +305,8 @@ function validateStepByKey(key, form) {
   const errors = {};
 
   if (key === "eventStatus") {
-    if (!form.eventStatus) errors.eventStatus = "Please select an event status.";
+    if (!form.eventStatus)
+      errors.eventStatus = "Please select an event status.";
   }
 
   if (key === "eventType") {
@@ -311,7 +317,8 @@ function validateStepByKey(key, form) {
   }
 
   if (key === "specialDay") {
-    if (!form.startAt) errors.startAt = "Please select event start date & time.";
+    if (!form.startAt)
+      errors.startAt = "Please select event start date & time.";
     if (!form.endAt) errors.endAt = "Please select event end date & time.";
     if (!form.durationHours) errors.durationHours = "Please select a duration.";
     const start = form.startAt ? new Date(form.startAt) : null;
@@ -424,6 +431,8 @@ const defaultForm = {
   companyName: "",
   phone: "",
   altPhone: "",
+  referredBy: "",
+  referredByPhone: "",
 };
 
 export default function AddLeads({
@@ -436,7 +445,8 @@ export default function AddLeads({
   submitting = false,
 }) {
   const isEdit = Boolean(editLead?._id);
-  const resolvedInitial = isEdit && editLead ? leadToInitialValues(editLead) : initialValues;
+  const resolvedInitial =
+    isEdit && editLead ? leadToInitialValues(editLead) : initialValues;
 
   const [step, setStep] = useState(0);
   const [touched, setTouched] = useState({});
@@ -453,7 +463,9 @@ export default function AddLeads({
     setTouched({});
     setForm({
       ...defaultForm,
-      ...(isEdit && editLead ? leadToInitialValues(editLead) : initialValues || {}),
+      ...(isEdit && editLead
+        ? leadToInitialValues(editLead)
+        : initialValues || {}),
     });
   }, [isOpen, isEdit, editLead, initialValues]);
 
@@ -850,7 +862,9 @@ export default function AddLeads({
                     </label>
                     <select
                       value={form.durationHours}
-                      onChange={(e) => setField("durationHours", e.target.value)}
+                      onChange={(e) =>
+                        setField("durationHours", e.target.value)
+                      }
                       onBlur={() => markTouched("durationHours")}
                       style={inputStyle}
                     >
@@ -861,7 +875,9 @@ export default function AddLeads({
                       ))}
                     </select>
                     {touched.durationHours && stepErrors.durationHours && (
-                      <div style={errorTextStyle}>{stepErrors.durationHours}</div>
+                      <div style={errorTextStyle}>
+                        {stepErrors.durationHours}
+                      </div>
                     )}
                   </div>
                 </>
@@ -883,7 +899,9 @@ export default function AddLeads({
                     style={inputStyle}
                   />
                   {touched.expectedGuests && stepErrors.expectedGuests && (
-                    <div style={errorTextStyle}>{stepErrors.expectedGuests}</div>
+                    <div style={errorTextStyle}>
+                      {stepErrors.expectedGuests}
+                    </div>
                   )}
                   <div style={helpTextStyle}>
                     An estimate is fine — it helps with capacity and planning.
@@ -893,7 +911,10 @@ export default function AddLeads({
 
               {currentKey === "contact" && (
                 <>
-                  <div className="add-leads-name-row" style={{ marginBottom: 12 }}>
+                  <div
+                    className="add-leads-name-row"
+                    style={{ marginBottom: 12 }}
+                  >
                     <div className="add-leads-name-prefix">
                       <label style={labelStyle}>Prefix</label>
                       <select
@@ -908,7 +929,10 @@ export default function AddLeads({
                         ))}
                       </select>
                     </div>
-                    <div className="add-leads-name-field" style={{ minWidth: 0 }}>
+                    <div
+                      className="add-leads-name-field"
+                      style={{ minWidth: 0 }}
+                    >
                       <label style={labelStyle}>
                         Client name <span style={{ color: "#d94f3d" }}>*</span>
                       </label>
@@ -921,13 +945,18 @@ export default function AddLeads({
                         style={inputStyle}
                       />
                       {touched.clientName && stepErrors.clientName && (
-                        <div style={errorTextStyle}>{stepErrors.clientName}</div>
+                        <div style={errorTextStyle}>
+                          {stepErrors.clientName}
+                        </div>
                       )}
                     </div>
                   </div>
 
                   {showBrideGroom && (
-                    <div className="add-leads-contact-grid" style={{ marginBottom: 12 }}>
+                    <div
+                      className="add-leads-contact-grid"
+                      style={{ marginBottom: 12 }}
+                    >
                       <div style={{ minWidth: 0 }}>
                         <label style={labelStyle}>
                           Bride name <span style={{ color: "#d94f3d" }}>*</span>
@@ -935,12 +964,16 @@ export default function AddLeads({
                         <input
                           type="text"
                           value={form.brideName}
-                          onChange={(e) => setField("brideName", e.target.value)}
+                          onChange={(e) =>
+                            setField("brideName", e.target.value)
+                          }
                           onBlur={() => markTouched("brideName")}
                           style={inputStyle}
                         />
                         {touched.brideName && stepErrors.brideName && (
-                          <div style={errorTextStyle}>{stepErrors.brideName}</div>
+                          <div style={errorTextStyle}>
+                            {stepErrors.brideName}
+                          </div>
                         )}
                       </div>
                       <div style={{ minWidth: 0 }}>
@@ -950,12 +983,16 @@ export default function AddLeads({
                         <input
                           type="text"
                           value={form.groomName}
-                          onChange={(e) => setField("groomName", e.target.value)}
+                          onChange={(e) =>
+                            setField("groomName", e.target.value)
+                          }
                           onBlur={() => markTouched("groomName")}
                           style={inputStyle}
                         />
                         {touched.groomName && stepErrors.groomName && (
-                          <div style={errorTextStyle}>{stepErrors.groomName}</div>
+                          <div style={errorTextStyle}>
+                            {stepErrors.groomName}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1027,7 +1064,9 @@ export default function AddLeads({
                       <input
                         type="text"
                         value={form.companyName}
-                        onChange={(e) => setField("companyName", e.target.value)}
+                        onChange={(e) =>
+                          setField("companyName", e.target.value)
+                        }
                         style={inputStyle}
                       />
                     </div>
@@ -1066,6 +1105,44 @@ export default function AddLeads({
                         <div style={errorTextStyle}>{stepErrors.altPhone}</div>
                       )}
                     </div>
+
+                    {/* Reference */}
+                    <div style={{ gridColumn: "1 / -1", marginTop: 8 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "#1a1917",
+                          fontFamily: "'DM Sans', sans-serif",
+                          marginBottom: 10,
+                        }}
+                      >
+                        Reference
+                      </div>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <label style={labelStyle}>Referred by</label>
+                      <input
+                        type="text"
+                        placeholder="Referrer name"
+                        value={form.referredBy}
+                        onChange={(e) => setField("referredBy", e.target.value)}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <label style={labelStyle}>Referrer contact</label>
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        placeholder="Referrer phone"
+                        value={form.referredByPhone}
+                        onChange={(e) =>
+                          setField("referredByPhone", e.target.value)
+                        }
+                        style={inputStyle}
+                      />
+                    </div>
                   </div>
                 </>
               )}
@@ -1084,8 +1161,8 @@ export default function AddLeads({
                       Meeting dates & notes
                     </div>
                     <div style={helpTextStyle}>
-                      Add one or more meetings. Each row needs a date & time; notes
-                      are optional.
+                      Add one or more meetings. Each row needs a date & time;
+                      notes are optional.
                     </div>
                   </div>
 
@@ -1208,7 +1285,8 @@ export default function AddLeads({
                     background: "#f5f4f1",
                     color: "#1a1917",
                     opacity: step === 0 || submitting ? 0.6 : 1,
-                    cursor: step === 0 || submitting ? "not-allowed" : "pointer",
+                    cursor:
+                      step === 0 || submitting ? "not-allowed" : "pointer",
                   }}
                 >
                   Back

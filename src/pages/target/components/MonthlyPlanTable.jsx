@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import {
   calcMonthlyTotals,
+  DURATIONS,
   fmtCurrency,
   fmtNum,
   parseNum,
@@ -34,6 +35,18 @@ function PlanTableHead() {
           }}
         >
           Venue &amp; Spaces
+        </th>
+        <th
+          rowSpan={2}
+          style={{
+            ...TH_BASE,
+            textAlign: "left",
+            color: "#aaa9a7",
+            borderRight: "1px solid rgba(255,255,255,0.15)",
+            verticalAlign: "middle",
+          }}
+        >
+          Duration
         </th>
         <th
           colSpan={4}
@@ -75,121 +88,147 @@ function PlanTableHead() {
   );
 }
 
-// ─── Single data row ───────────────────────────────────────────────────────────
+// ─── Single data row (expands to 4 tr elements, one per duration) ──────────────
 
 function PlanRow({ row, idx, editMode, onCellChange }) {
-  const expBiz = parseNum(row.expectedBusiness);
-  const expExp = parseNum(row.expectedExpenses);
-  const expProfit =
-    expBiz !== null || expExp !== null ? (expBiz ?? 0) - (expExp ?? 0) : null;
-  const actProfit = (row.actualBusiness ?? 0) - (row.actualExpenses ?? 0);
-  const isEven = idx % 2 === 0;
   const isVenueBuyout = row.rowType === "venue_buyout";
-  const rowKey = isVenueBuyout ? "venue_buyout" : row.spaceId?.toString();
+  const isEven = idx % 2 === 0;
+  const baseBg = isEven ? "#fff" : "#fafaf9";
 
   return (
-    <tr key={rowKey} style={{ background: isEven ? "#fff" : "#fafaf9" }}>
-      {/* Label */}
-      <td
-        style={{
-          ...TD_BASE,
-          textAlign: "left",
-          fontWeight: isVenueBuyout ? 700 : 500,
-          paddingLeft: isVenueBuyout ? 14 : 28,
-          color: isVenueBuyout ? "#1a1917" : "#4a4845",
-          borderRight: "1px solid #ece9e4",
-        }}
-      >
-        {!isVenueBuyout && (
-          <span style={{ color: "#c5c2be", marginRight: 6, fontSize: 11 }}>
-            └
-          </span>
-        )}
-        {row.spaceName}
-      </td>
+    <React.Fragment>
+      {DURATIONS.map((dur, durIdx) => {
+        const durData = row.durations?.[dur.key] ?? {};
+        const expBiz = parseNum(durData.expectedBusiness);
+        const expExp = parseNum(durData.expectedExpenses);
+        const expProfit =
+          expBiz !== null || expExp !== null ? (expBiz ?? 0) - (expExp ?? 0) : null;
+        const actProfit = (durData.actualBusiness ?? 0) - (durData.actualExpenses ?? 0);
+        const isFirst = durIdx === 0;
+        const isLast = durIdx === DURATIONS.length - 1;
+        const bottomBorder = isLast ? "2px solid #d4cfc4" : "1px solid #f0ede8";
+        const cellBg = editMode ? "#fffdf7" : baseBg;
 
-      {/* Expected Bookings */}
-      <td style={{ ...TD_BASE, background: editMode ? "#fffdf7" : undefined }}>
-        {editMode ? (
-          <input
-            type="number"
-            min="0"
-            value={row.expectedBookings}
-            onChange={(e) =>
-              onCellChange(idx, "expectedBookings", e.target.value)
-            }
-            style={inputStyle}
-            aria-label={`Expected bookings for ${row.spaceName}`}
-          />
-        ) : (
-          fmtNum(row.expectedBookings)
-        )}
-      </td>
+        return (
+          <tr key={dur.key} style={{ background: cellBg }}>
+            {/* Venue/Space name — only once, spans all duration rows */}
+            {isFirst && (
+              <td
+                rowSpan={DURATIONS.length}
+                style={{
+                  ...TD_BASE,
+                  textAlign: "left",
+                  fontWeight: isVenueBuyout ? 700 : 500,
+                  paddingLeft: isVenueBuyout ? 14 : 28,
+                  color: isVenueBuyout ? "#1a1917" : "#4a4845",
+                  borderRight: "1px solid #ece9e4",
+                  borderBottom: "2px solid #d4cfc4",
+                  verticalAlign: "top",
+                  paddingTop: 14,
+                }}
+              >
+                {!isVenueBuyout && (
+                  <span style={{ color: "#c5c2be", marginRight: 6, fontSize: 11 }}>└</span>
+                )}
+                {row.spaceName}
+              </td>
+            )}
 
-      {/* Expected Business */}
-      <td style={{ ...TD_BASE, background: editMode ? "#fffdf7" : undefined }}>
-        {editMode ? (
-          <input
-            type="number"
-            min="0"
-            value={row.expectedBusiness}
-            onChange={(e) =>
-              onCellChange(idx, "expectedBusiness", e.target.value)
-            }
-            style={inputStyle}
-            aria-label={`Expected business for ${row.spaceName}`}
-          />
-        ) : (
-          fmtCurrency(row.expectedBusiness)
-        )}
-      </td>
+            {/* Duration label */}
+            <td
+              style={{
+                ...TD_BASE,
+                textAlign: "left",
+                fontSize: 12,
+                color: "#6b6966",
+                fontWeight: 600,
+                borderRight: "1px solid #ece9e4",
+                borderBottom: bottomBorder,
+                background: cellBg,
+              }}
+            >
+              {dur.label}
+            </td>
 
-      {/* Expected Expenses */}
-      <td style={{ ...TD_BASE, background: editMode ? "#fffdf7" : undefined }}>
-        {editMode ? (
-          <input
-            type="number"
-            min="0"
-            value={row.expectedExpenses}
-            onChange={(e) =>
-              onCellChange(idx, "expectedExpenses", e.target.value)
-            }
-            style={inputStyle}
-            aria-label={`Expected expenses for ${row.spaceName}`}
-          />
-        ) : (
-          fmtCurrency(row.expectedExpenses)
-        )}
-      </td>
+            {/* Expected Bookings */}
+            <td style={{ ...TD_BASE, background: cellBg, borderBottom: bottomBorder }}>
+              {editMode ? (
+                <input
+                  type="number"
+                  min="0"
+                  value={durData.expectedBookings ?? ""}
+                  onChange={(e) => onCellChange(idx, dur.key, "expectedBookings", e.target.value)}
+                  style={inputStyle}
+                  aria-label={`Expected bookings ${row.spaceName} ${dur.label}`}
+                />
+              ) : (
+                fmtNum(durData.expectedBookings)
+              )}
+            </td>
 
-      {/* Expected Profits — always auto-computed */}
-      <td
-        style={{
-          ...TD_BASE,
-          fontWeight: 600,
-          color: profitColor(expProfit),
-          borderRight: "1px solid #ece9e4",
-        }}
-      >
-        {expProfit === null ? "—" : fmtCurrency(expProfit)}
-      </td>
+            {/* Expected Business */}
+            <td style={{ ...TD_BASE, background: cellBg, borderBottom: bottomBorder }}>
+              {editMode ? (
+                <input
+                  type="number"
+                  min="0"
+                  value={durData.expectedBusiness ?? ""}
+                  onChange={(e) => onCellChange(idx, dur.key, "expectedBusiness", e.target.value)}
+                  style={inputStyle}
+                  aria-label={`Expected business ${row.spaceName} ${dur.label}`}
+                />
+              ) : (
+                fmtCurrency(durData.expectedBusiness)
+              )}
+            </td>
 
-      {/* Actual Bookings */}
-      <td style={TD_BASE}>{fmtNum(row.actualBookings)}</td>
+            {/* Expected Expenses */}
+            <td style={{ ...TD_BASE, background: cellBg, borderBottom: bottomBorder }}>
+              {editMode ? (
+                <input
+                  type="number"
+                  min="0"
+                  value={durData.expectedExpenses ?? ""}
+                  onChange={(e) => onCellChange(idx, dur.key, "expectedExpenses", e.target.value)}
+                  style={inputStyle}
+                  aria-label={`Expected expenses ${row.spaceName} ${dur.label}`}
+                />
+              ) : (
+                fmtCurrency(durData.expectedExpenses)
+              )}
+            </td>
 
-      {/* Actual Business */}
-      <td style={TD_BASE}>{fmtCurrency(row.actualBusiness)}</td>
+            {/* Expected Profits — auto-computed */}
+            <td
+              style={{
+                ...TD_BASE,
+                fontWeight: 600,
+                color: profitColor(expProfit),
+                borderRight: "1px solid #ece9e4",
+                borderBottom: bottomBorder,
+                background: cellBg,
+              }}
+            >
+              {expProfit === null ? "—" : fmtCurrency(expProfit)}
+            </td>
 
-      {/* Actual Expenses */}
-      <td style={TD_BASE}>{fmtCurrency(row.actualExpenses)}</td>
+            {/* Actual Bookings */}
+            <td style={{ ...TD_BASE, borderBottom: bottomBorder }}>{fmtNum(durData.actualBookings)}</td>
 
-      {/* Actual Profits — auto-computed */}
-      <td
-        style={{ ...TD_BASE, fontWeight: 600, color: profitColor(actProfit) }}
-      >
-        {fmtCurrency(actProfit)}
-      </td>
-    </tr>
+            {/* Actual Business */}
+            <td style={{ ...TD_BASE, borderBottom: bottomBorder }}>{fmtCurrency(durData.actualBusiness)}</td>
+
+            {/* Actual Expenses */}
+            <td style={{ ...TD_BASE, borderBottom: bottomBorder }}>{fmtCurrency(durData.actualExpenses)}</td>
+
+            {/* Actual Profits — auto-computed */}
+            <td style={{ ...TD_BASE, fontWeight: 600, color: profitColor(actProfit), borderBottom: bottomBorder }}>
+              {fmtCurrency(actProfit)}
+            </td>
+          </tr>
+        );
+      })}
+    </React.Fragment>
   );
 }
 
@@ -208,6 +247,8 @@ function TotalsRow({ totals, label = "Total" }) {
       >
         {label}
       </td>
+      {/* Empty Duration column */}
+      <td style={{ ...bgStyle, borderRight: "1px solid #ece9e4" }} />
       <td style={bgStyle}>{fmtNum(totals.expectedBookings)}</td>
       <td style={bgStyle}>{fmtCurrency(totals.expectedBusiness)}</td>
       <td style={bgStyle}>{fmtCurrency(totals.expectedExpenses)}</td>
@@ -324,14 +365,15 @@ export default function MonthlyPlanTable({
         >
           <colgroup>
             <col style={{ minWidth: 190 }} />
-            <col style={{ minWidth: 120 }} />
-            <col style={{ minWidth: 145 }} />
-            <col style={{ minWidth: 145 }} />
-            <col style={{ minWidth: 145 }} />
-            <col style={{ minWidth: 120 }} />
-            <col style={{ minWidth: 145 }} />
-            <col style={{ minWidth: 145 }} />
-            <col style={{ minWidth: 145 }} />
+            <col style={{ minWidth: 110 }} />
+            <col style={{ minWidth: 110 }} />
+            <col style={{ minWidth: 135 }} />
+            <col style={{ minWidth: 135 }} />
+            <col style={{ minWidth: 135 }} />
+            <col style={{ minWidth: 110 }} />
+            <col style={{ minWidth: 135 }} />
+            <col style={{ minWidth: 135 }} />
+            <col style={{ minWidth: 135 }} />
           </colgroup>
 
           <PlanTableHead />
