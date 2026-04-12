@@ -126,7 +126,6 @@ function profileSnapshot(p) {
 export default function VenueProfile() {
   const { access_token: accessToken, role, venueId: myVenueId, venue: venueFromRedux } = useSelector((s) => s.user.value);
   const [msgApi, contextHolder] = message.useMessage();
-  const lastSavedSnapshotRef = useRef(null);
 
   const isAdmin = role === ROLES.ADMIN;
   const [venuesLoading, setVenuesLoading] = useState(false);
@@ -141,10 +140,13 @@ export default function VenueProfile() {
     }),
   );
 
-  const isDirty = useMemo(() => {
-    if (lastSavedSnapshotRef.current == null) return false;
-    return profileSnapshot(profile) !== lastSavedSnapshotRef.current;
-  }, [profile]);
+  /** Baseline for dirty check; must not stay null or edits never enable Save. */
+  const lastSavedSnapshotRef = useRef(profileSnapshot(profile));
+
+  const isDirty = useMemo(
+    () => profileSnapshot(profile) !== lastSavedSnapshotRef.current,
+    [profile],
+  );
 
   /** Read-only venue name: from Redux (incharge) or selected option label (admin). */
   const displayVenueName = useMemo(() => {
@@ -197,7 +199,11 @@ export default function VenueProfile() {
       lastSavedSnapshotRef.current = profileSnapshot(next);
     } catch (err) {
       msgApi.error(err?.response?.data?.message ?? "Failed to load venue profile");
-      setProfile((prev) => ({ ...prev, venueId: isAdmin ? selectedVenueId : myVenueId }));
+      setProfile((prev) => {
+        const next = { ...prev, venueId: isAdmin ? selectedVenueId : myVenueId };
+        lastSavedSnapshotRef.current = profileSnapshot(next);
+        return next;
+      });
     } finally {
       setLoading(false);
     }
