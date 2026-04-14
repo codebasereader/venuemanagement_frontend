@@ -46,6 +46,57 @@ export function emptyDurations() {
   return Object.fromEntries(DURATIONS.map((d) => [d.key, emptyDurationSlot()]));
 }
 
+function normalizeDurationsFromApi(durationSource = {}) {
+  const durations = {};
+  for (const { key } of DURATIONS) {
+    const dur = durationSource?.[key] ?? {};
+    durations[key] = {
+      expectedBookings: dur.expectedBookings ?? "",
+      expectedBusiness: dur.expectedBusiness ?? "",
+      expectedExpenses: dur.expectedExpenses ?? "",
+      actualBookings: dur.actualBookings ?? 0,
+      actualBusiness: dur.actualBusiness ?? 0,
+      actualExpenses: dur.actualExpenses ?? 0,
+    };
+  }
+  return durations;
+}
+
+function buildFallbackRowsFromSpaces(apiData) {
+  const rows = [];
+
+  // Keep venue buyout visible even when API rows are empty.
+  rows.push({
+    rowType: "venue_buyout",
+    spaceId: null,
+    spaceName: "Complete Venue Buyout",
+    durations: normalizeDurationsFromApi(apiData?.totals?.durationTotals),
+  });
+
+  const spaces = Array.isArray(apiData?.spaces) ? apiData.spaces : [];
+  for (const space of spaces) {
+    const durations = emptyDurations();
+    // Backend currently returns actuals per space as totals, not per duration.
+    // Put them in "Full Day" bucket so the user can still see and post rows.
+    const bucket = "24";
+    durations[bucket] = {
+      ...durations[bucket],
+      actualBookings: space?.actualBookings ?? 0,
+      actualBusiness: space?.actualBusiness ?? 0,
+      actualExpenses: space?.actualExpenses ?? 0,
+    };
+
+    rows.push({
+      rowType: "space",
+      spaceId: space?.spaceId ?? null,
+      spaceName: space?.spaceName ?? "Unnamed Space",
+      durations,
+    });
+  }
+
+  return rows;
+}
+
 // ─── Formatting ───────────────────────────────────────────────────────────────
 
 export function parseNum(v) {
@@ -81,20 +132,12 @@ export function profitColor(val) {
  */
 export function mergeRowsWithApiData(apiData) {
   const apiRows = apiData?.rows ?? [];
+  if (apiRows.length === 0) {
+    return buildFallbackRowsFromSpaces(apiData);
+  }
 
   return apiRows.map((row) => {
-    const durations = {};
-    for (const { key } of DURATIONS) {
-      const dur = row.durations?.[key] ?? {};
-      durations[key] = {
-        expectedBookings: dur.expectedBookings ?? "",
-        expectedBusiness: dur.expectedBusiness ?? "",
-        expectedExpenses: dur.expectedExpenses ?? "",
-        actualBookings: dur.actualBookings ?? 0,
-        actualBusiness: dur.actualBusiness ?? 0,
-        actualExpenses: dur.actualExpenses ?? 0,
-      };
-    }
+    const durations = normalizeDurationsFromApi(row.durations);
     return {
       rowType: row.rowType,
       spaceId: row.spaceId ?? null,
