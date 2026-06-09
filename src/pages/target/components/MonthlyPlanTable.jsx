@@ -2,8 +2,10 @@ import React, { useMemo } from "react";
 import {
   calcMonthlyTotals,
   DURATIONS,
+  formatDurationWithPrice,
   fmtCurrency,
   fmtNum,
+  getDurationPrice,
   parseNum,
   profitColor,
 } from "../utils/targetHelpers";
@@ -154,7 +156,7 @@ function PlanRow({ row, idx, editMode, onCellChange }) {
                 background: cellBg,
               }}
             >
-              {dur.label}
+              {formatDurationWithPrice(row, dur)}
             </td>
 
             {/* Expected Bookings */}
@@ -209,6 +211,7 @@ function PlanRow({ row, idx, editMode, onCellChange }) {
                   }
                   style={inputStyle}
                   aria-label={`Expected business ${row.spaceName} ${dur.label}`}
+                  disabled={getDurationPrice(row, dur.key) !== null}
                 />
               ) : (
                 fmtCurrency(durData.expectedBusiness)

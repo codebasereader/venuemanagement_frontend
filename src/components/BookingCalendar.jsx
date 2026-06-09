@@ -1,14 +1,14 @@
 // ─────────────────────────────────────────────────────────────
 // BookingCalendar.jsx
-// Booking + religious calendar overlay (Hindu / Muslim / Christian).
+// Religious calendar overlay (Hindu / Muslim / Christian).
 //
 // Default export: <BookingCalendar /> — drop into any page.
 //
 // Props:
 //   year         number                  currently displayed year
 //   onYearChange (year: number) => void  called when user picks a year
-//   bookedDates  Set<string>             set of "YYYY-MM-DD" keys
-//   onToggle     (key: string) => void   called when a day is clicked
+//   bookedDates  (unused; kept for backward compatibility)
+//   onToggle     (unused; kept for backward compatibility)
 // ─────────────────────────────────────────────────────────────
 
 import { memo, useMemo, useState, useRef, useEffect } from "react";
@@ -19,7 +19,6 @@ import {
 } from "../utils/calendarUtils";
 import { CalendarTabs } from "../pages/admin/calendar/CalendarTabs";
 import { listCalendarDays } from "../api/calendar";
-import { listConfirmedLeads } from "../api/leads";
 
 // Computed once — never changes at runtime
 const AVAILABLE_YEARS = getAvailableYears();
@@ -67,12 +66,8 @@ const CalendarDayCell = memo(function CalendarDayCell({
   day,
   year,
   month,
-  isBooked,
   /** Auspicious type string, or `{ mode: 'faith', religions: string[] }` for the All tab */
   religiousEntry,
-  dateKey,
-  onToggle, // kept for API compatibility, but ignored (read‑only calendar)
-  isLocked = false,
 }) {
   const isToday = TODAY.getFullYear() === year && TODAY.getMonth() === month && TODAY.getDate() === day;
 
@@ -146,28 +141,6 @@ const CalendarDayCell = memo(function CalendarDayCell({
         }}
       >
         <span>{day}</span>
-        {isBooked && (
-          <span
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: 3,
-              right: 3,
-              width: 11,
-              height: 11,
-              borderRadius: "50%",
-              background: "#1a1917",
-              color: "#ffffff",
-              fontSize: 7,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 0 0 1px rgba(255,255,255,0.8)",
-            }}
-          >
-            ✓
-          </span>
-        )}
       </div>
     </button>
   );
@@ -176,7 +149,7 @@ const CalendarDayCell = memo(function CalendarDayCell({
 // ── MonthGrid ──────────────────────────────────────────────────
 // One month: name, M T W T F S S header, and date cells.
 
-const MonthGrid = memo(function MonthGrid({ year, month, bookedDates, blockedDates, religiousByDate, onToggle }) {
+const MonthGrid = memo(function MonthGrid({ year, month, religiousByDate }) {
   const cells = useMemo(() => {
     const days   = getDaysInMonth(year, month);
     const offset = getStartOffset(year, month);
@@ -221,18 +194,13 @@ const MonthGrid = memo(function MonthGrid({ year, month, bookedDates, blockedDat
         {cells.map((day, i) => {
           if (day === null) return <div key={`e-${i}`} aria-hidden="true" />;
           const key = toDateKey(year, month, day);
-          const locked = blockedDates.has(key);
           return (
             <CalendarDayCell
               key={key}
               day={day}
               year={year}
               month={month}
-              isBooked={bookedDates.has(key) || locked}
               religiousEntry={religiousByDate.get(key)}
-              dateKey={key}
-              onToggle={onToggle}
-              isLocked={locked}
             />
           );
         })}
@@ -245,14 +213,12 @@ const MonthGrid = memo(function MonthGrid({ year, month, bookedDates, blockedDat
 
 function CalendarLegend({ variant = "auspicious" }) {
   const faithItems = [
-    { key: "booked", label: "Booked (tick mark)", bg: "#1a1917", border: "1px solid #f5f4f1", isTick: true },
     { key: "today", label: "Today", bg: "#ede8ff", border: "1.5px solid #7c6fcd" },
     { key: "christian", label: "Christian", bg: RELIGION_VIEW_COLORS.christian, border: "none" },
     { key: "muslim", label: "Muslim", bg: RELIGION_VIEW_COLORS.muslim, border: "none" },
     { key: "hindu", label: "Hindu", bg: RELIGION_VIEW_COLORS.hindu, border: "none" },
   ];
   const auspiciousItems = [
-    { key: "booked", label: "Booked (tick mark)", bg: "#1a1917", border: "1px solid #f5f4f1", isTick: true },
     { key: "today", label: "Today",            bg: "#ede8ff", border: "1.5px solid #7c6fcd" },
     { key: "most",  label: "Highly Auspicious",  bg: RELIGIOUS_COLORS.most_auspicious, border: "none" },
     { key: "ausp",  label: "Auspicious",       bg: RELIGIOUS_COLORS.auspicious, border: "none" },
@@ -385,10 +351,9 @@ function YearSelector({ year, onChange }) {
 // Responsive: auto-fill from 1 col (mobile) to 4 cols (desktop).
 
 export default function BookingCalendar({ year, onYearChange, bookedDates, onToggle }) {
-  const { access_token: accessToken, venueId } = useSelector((state) => state.user.value);
+  const { access_token: accessToken } = useSelector((state) => state.user.value);
   const [religion, setReligion] = useState("all");
   const [religiousByDate, setReligiousByDate] = useState(new Map());
-  const [blockedDates, setBlockedDates] = useState(new Set());
 
   useEffect(() => {
     if (!accessToken) return;
@@ -436,49 +401,6 @@ export default function BookingCalendar({ year, onYearChange, bookedDates, onTog
     };
   }, [accessToken, religion, year]);
 
-  // Load confirmed leads and block their event date ranges on the calendar.
-  useEffect(() => {
-    if (!accessToken || !venueId) return;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await listConfirmedLeads(venueId, accessToken, { year });
-        const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-        const set = new Set();
-        for (const lead of arr) {
-          const sd = lead?.specialDay;
-          if (!sd?.startAt || !sd?.endAt) continue;
-          const start = new Date(sd.startAt);
-          const end = new Date(sd.endAt);
-          if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
-          // Walk from start to end (inclusive), but only for this year.
-          const cursor = new Date(start);
-          while (cursor <= end) {
-            if (cursor.getFullYear() === year) {
-              const key = toDateKey(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
-              set.add(key);
-            }
-            cursor.setDate(cursor.getDate() + 1);
-          }
-        }
-        if (!cancelled) {
-          setBlockedDates(set);
-        }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error("Failed to load confirmed leads for calendar", err);
-        if (!cancelled) {
-          setBlockedDates(new Set());
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken, venueId, year]);
-
   return (
     <section aria-label={`Booking calendar ${year}`} style={{
       background: "white",
@@ -501,7 +423,7 @@ export default function BookingCalendar({ year, onYearChange, bookedDates, onTog
             Booking Calendar
           </h2>
           <p style={{ margin: "4px 0 4px", fontSize: "12px", color: "#9a9896", fontFamily: "'DM Sans', sans-serif" }}>
-            Dates are auto-marked from confirmed leads and the religious calendar
+            Auspicious days are shown from the calendar-days API
           </p>
           <div style={{ marginTop: "4px" }}>
             <CalendarTabs value={religion} onChange={setReligion} includeAllTab />
@@ -523,10 +445,7 @@ export default function BookingCalendar({ year, onYearChange, bookedDates, onTog
             key={`${year}-${m}`}
             year={year}
             month={m}
-            bookedDates={bookedDates}
-            blockedDates={blockedDates}
             religiousByDate={religiousByDate}
-            onToggle={onToggle}
           />
         ))}
       </div>

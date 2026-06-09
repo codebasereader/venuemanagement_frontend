@@ -25,6 +25,7 @@ const inputStyle = {
 const EMI_TYPES = [
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly" },
+  { value: "half-yearly", label: "Half-yearly" },
   { value: "yearly", label: "Yearly" },
 ];
 

@@ -140,7 +140,11 @@ export default function EmiCalendarView({
 
     bills.forEach((bill) => {
       if (!bill.emiDate || !bill.emi_end_date) return;
-      const spans = generateEmiMonths(bill.emiDate, bill.emi_end_date);
+      const spans = generateEmiMonths(
+        bill.emiDate,
+        bill.emi_end_date,
+        bill.emiType,
+      );
       const inThisMonth = spans.some(
         (s) => s.month === displayMonth && s.year === year,
       );

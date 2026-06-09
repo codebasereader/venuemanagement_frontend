@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCurrentUser, logout } from "../reducers/user";
 import { ROLES } from "../../config";
@@ -177,6 +177,25 @@ const DaybookIcon = ({ size = 20 }) => (
   </svg>
 );
 
+const PaymentsIcon = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="8" y1="13" x2="16" y2="13" />
+    <line x1="8" y1="17" x2="16" y2="17" />
+    <line x1="8" y1="9" x2="10" y2="9" />
+  </svg>
+);
+
 const TargetIcon = ({ size = 20 }) => (
   <svg
     width={size}
@@ -212,6 +231,40 @@ const EmiIcon = ({ size = 20 }) => (
   </svg>
 );
 
+const DatabaseIcon = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <ellipse cx="12" cy="5" rx="9" ry="3" />
+    <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+    <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" />
+  </svg>
+);
+
+const MoreIcon = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="1.5" />
+    <circle cx="19" cy="12" r="1.5" />
+    <circle cx="5" cy="12" r="1.5" />
+  </svg>
+);
+
 // ── Nav configs (role-based) ───────────────────────────────────────────────
 
 const inchargeNavItems = [
@@ -234,8 +287,10 @@ const ownerNavItems = [
   { path: "/vendors", label: "Vendor's List", icon: VendorsIcon },
   { path: "/calendar", label: "Calendar", icon: CalendarIcon },
   { path: "/daybook", label: "Daybook", icon: DaybookIcon },
+  { path: "/payments", label: "Payments", icon: PaymentsIcon },
   { path: "/target", label: "Target", icon: TargetIcon },
   { path: "/emi", label: "EMI/Bills Tracker", icon: EmiIcon },
+  { path: "/database", label: "Database", icon: DatabaseIcon },
   { path: "/profile", label: "Profile", icon: ProfileIcon },
 ];
 
@@ -311,8 +366,10 @@ function BottomNavItem({ path, label, icon: Icon, end }) {
 export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { name, role, access_token } = useSelector((state) => state.user.value);
 
   const navItems =
@@ -327,6 +384,8 @@ export default function DashboardLayout() {
       : role === ROLES.OWNER
         ? "Owner"
         : "Venue Incharge";
+  const primaryMobileItems = navItems.slice(0, 3);
+  const overflowMobileItems = navItems.slice(3);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -339,6 +398,10 @@ export default function DashboardLayout() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  useEffect(() => {
+    setIsMoreMenuOpen(false);
+  }, [location.pathname, isMobile]);
 
   useEffect(() => {
     if (!access_token) return;
@@ -470,20 +533,82 @@ export default function DashboardLayout() {
 
       {/* ══ MOBILE BOTTOM NAV ══ */}
       {isMobile && (
-        <nav
-          className="fixed bottom-0 left-0 right-0 h-16 bg-[rgba(250,249,247,0.95)] backdrop-blur-md border-t border-[#ece9e4] flex items-center z-40"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        >
-          {navItems.map(({ path, label, icon, end }) => (
-            <BottomNavItem
-              key={path}
-              path={path}
-              label={label}
-              icon={icon}
-              end={end}
-            />
-          ))}
-        </nav>
+        <>
+          {isMoreMenuOpen && overflowMobileItems.length > 0 && (
+            <div
+              role="presentation"
+              className="fixed inset-0 z-40 bg-[rgba(26,25,23,0.25)]"
+              onClick={() => setIsMoreMenuOpen(false)}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="More menu items"
+                id="mobile-more-menu"
+                className="absolute left-3 right-3 rounded-2xl border border-[#ece9e4] bg-[#faf9f7] shadow-[0_10px_30px_rgba(0,0,0,0.15)] p-2"
+                style={{ bottom: "74px" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-[11px] font-semibold text-[#8a8784] px-2 py-1">
+                  More menu
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  {overflowMobileItems.map(({ path, label, icon: Icon, end }) => (
+                    <NavLink
+                      key={path}
+                      to={path}
+                      end={end}
+                      onClick={() => setIsMoreMenuOpen(false)}
+                      className={({ isActive }) =>
+                        [
+                          "flex items-center gap-2 rounded-xl px-3 py-2.5 text-[12px] font-semibold no-underline transition-colors duration-150",
+                          isActive
+                            ? "bg-[#1a1917] text-white [&_svg]:stroke-white"
+                            : "text-[#6b6966] hover:bg-[#f0ede8]",
+                        ].join(" ")
+                      }
+                    >
+                      <Icon size={18} />
+                      <span className="truncate">{label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <nav
+            className="fixed bottom-0 left-0 right-0 h-16 bg-[rgba(250,249,247,0.95)] backdrop-blur-md border-t border-[#ece9e4] flex items-center z-50"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          >
+            {primaryMobileItems.map(({ path, label, icon, end }) => (
+              <BottomNavItem
+                key={path}
+                path={path}
+                label={label}
+                icon={icon}
+                end={end}
+              />
+            ))}
+            {overflowMobileItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsMoreMenuOpen((prev) => !prev)}
+                className={[
+                  "flex flex-col items-center justify-center gap-1 flex-1 py-2 px-1 border-none bg-transparent",
+                  "text-[10px] font-semibold tracking-wide font-sans cursor-pointer transition-colors duration-150",
+                  isMoreMenuOpen ? "text-[#7c6fcd]" : "text-[#9a9896]",
+                ].join(" ")}
+                aria-label="Open more menu"
+                aria-expanded={isMoreMenuOpen}
+                aria-controls="mobile-more-menu"
+              >
+                <MoreIcon size={22} />
+                More
+              </button>
+            )}
+          </nav>
+        </>
       )}
     </div>
   );

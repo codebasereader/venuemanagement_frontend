@@ -3,95 +3,19 @@
 // Imports: BookingCalendar + calendarUtils (3 files total)
 // ─────────────────────────────────────────────────────────────
 
-import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useState } from "react";
 import BookingCalendar from "../components/BookingCalendar";
 import { getAvailableYears, getGreeting } from "../utils/calendarUtils";
-import { listConfirmedLeadStats } from "../api/leads";
 
 // Computed once on load — stable across renders
 const GREETING     = getGreeting();
 const YEARS        = getAvailableYears();
 const DEFAULT_YEAR = YEARS[YEARS.length - 1]; // most recent year
 
-// ── Stat Card ─────────────────────────────────────────────────
-
-function StatCard({ label, value, sub, color }) {
-  return (
-    <div style={{
-      flex: "1 1 90px",
-      background: "white",
-      borderRadius: "14px",
-      padding: "16px 18px",
-      border: "1px solid #f1f0ee",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-    }}>
-      <p style={{
-        margin: "0 0 6px", fontSize: "11px", color: "#9a9896",
-        fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase",
-        fontFamily: "'DM Sans', sans-serif",
-      }}>
-        {label}
-      </p>
-      <p style={{
-        margin: 0,
-        fontSize: "clamp(20px, 4vw, 26px)",
-        fontWeight: 700,
-        color,
-        fontFamily: "'DM Serif Display', Georgia, serif",
-        letterSpacing: "-0.02em",
-        lineHeight: 1,
-      }}>
-        {value}
-      </p>
-      {sub && (
-        <p style={{
-          margin: "5px 0 0", fontSize: "11px", color: "#b5b3b0",
-          fontFamily: "'DM Sans', sans-serif",
-        }}>
-          {sub}
-        </p>
-      )}
-    </div>
-  );
-}
-
 // ── Home Page ─────────────────────────────────────────────────
 
 export default function Home() {
-  const { access_token: token, venueId } = useSelector(
-    (state) => state.user.value,
-  );
   const [year, setYear] = useState(DEFAULT_YEAR);
-  const [stats, setStats] = useState(null);
-  const [loadingStats, setLoadingStats] = useState(false);
-
-  useEffect(() => {
-    if (!token || !venueId) return;
-
-    let cancelled = false;
-    (async () => {
-      setLoadingStats(true);
-      try {
-        const data = await listConfirmedLeadStats(venueId, token, {
-          year,
-        });
-        if (!cancelled) {
-          setStats(data);
-        }
-      } catch {
-        if (!cancelled) {
-          setStats(null);
-        }
-      } finally {
-        if (!cancelled) setLoadingStats(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token, venueId, year]);
 
   return (
     <div style={{
@@ -139,44 +63,6 @@ export default function Home() {
           </svg>
         </button>
       </header>
-
-      {/* ── Stats strip (API-driven) ── */}
-      <div role="region" aria-label="Booking statistics" style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-        <StatCard
-          label="Total bookings"
-          value={stats?.totalBookings ?? (loadingStats ? "…" : 0)}
-          color="#e8875a"
-          sub={`Year ${year}`}
-        />
-        <StatCard
-          label="Revenue"
-          value={
-            stats
-              ? `₹${(stats.totalRevenue ?? 0).toLocaleString("en-IN")}`
-              : loadingStats
-                ? "…"
-                : "₹0"
-          }
-          color="#5ab99c"
-          sub="Confirmed in year"
-        />
-        <StatCard
-          label="Event days"
-          value={stats?.totalEventDays ?? (loadingStats ? "…" : 0)}
-          color="#7c6fcd"
-        />
-        <StatCard
-          label="Occupancy"
-          value={
-            stats?.occupancyPercent != null
-              ? `${stats.occupancyPercent.toFixed(1)}%`
-              : loadingStats
-                ? "…"
-                : "0.0%"
-          }
-          color="#c9a84c"
-        />
-      </div>
 
       {/* ── Full-year booking calendar ── */}
       <BookingCalendar

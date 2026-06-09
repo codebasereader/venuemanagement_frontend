@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { normalizeRackRates } from "../../api/spaces";
 
 const labelStyle = {
   display: "block",
@@ -33,7 +34,17 @@ const btnBase = {
   transition: "background 0.15s",
 };
 
-const MAX_IMAGES = 5;
+const MAX_IMAGES = 2;
+const DURATIONS = [
+  { key: "12", label: "Half Day" },
+  { key: "24", label: "Full Day" },
+  { key: "36", label: "1.5 Days" },
+  { key: "48", label: "2 Days" },
+];
+
+function emptyRackRates() {
+  return Object.fromEntries(DURATIONS.map((d) => [d.key, ""]));
+}
 
 function ImageSlot({ value, onChange, onRemove, index, canRemove }) {
   const inputRef = useRef(null);
@@ -132,6 +143,7 @@ export default function AddSpaceModal({ isOpen, onClose, onSave, editSpace = nul
   const [capacity, setCapacity] = useState("");
   const [dimensions, setDimensions] = useState("");
   const [images, setImages] = useState(() => Array(MAX_IMAGES).fill(null));
+  const [rackRates, setRackRates] = useState(() => emptyRackRates());
 
   const isEdit = Boolean(editSpace);
 
@@ -144,12 +156,27 @@ export default function AddSpaceModal({ isOpen, onClose, onSave, editSpace = nul
       const imgs = [...(editSpace.images || [])];
       while (imgs.length < MAX_IMAGES) imgs.push(null);
       setImages(imgs.slice(0, MAX_IMAGES));
+
+      const existingRates =
+        editSpace.rackRates ??
+        editSpace.prices ??
+        editSpace.pricing?.rackRates ??
+        {};
+      setRackRates(() => {
+        const next = emptyRackRates();
+        for (const { key } of DURATIONS) {
+          const v = existingRates?.[key];
+          next[key] = v == null || v === "" ? "" : String(v);
+        }
+        return next;
+      });
     } else {
       setName("");
       setDescription("");
       setCapacity("");
       setDimensions("");
       setImages(Array(MAX_IMAGES).fill(null));
+      setRackRates(emptyRackRates());
     }
   }, [editSpace, isOpen]);
 
@@ -173,12 +200,16 @@ export default function AddSpaceModal({ isOpen, onClose, onSave, editSpace = nul
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    const normalizedRackRates = normalizeRackRates(rackRates);
+
     const payload = {
       name: name.trim(),
       description: description.trim(),
       capacity: capacity.trim() === "" ? undefined : Number(capacity),
       dimensions: dimensions.trim() || undefined,
       images: images.filter(Boolean),
+      ...(Object.keys(normalizedRackRates).length > 0 ? { rackRates: normalizedRackRates } : {}),
     };
     if (editSpace?._id) payload._id = editSpace._id;
     onSave(payload);
@@ -278,6 +309,93 @@ export default function AddSpaceModal({ isOpen, onClose, onSave, editSpace = nul
             onChange={(e) => setDimensions(e.target.value)}
             style={inputStyle}
           />
+
+          <div style={{ marginTop: "18px" }}>
+            <label style={labelStyle}>Price</label>
+            <p style={{ margin: "-6px 0 16px", fontSize: "12px", color: "#6b6966" }}>
+              Enter base cost for each duration.
+            </p>
+
+            <div
+              style={{
+                background: "#faf9f7",
+                border: "1px solid #e8e6e2",
+                borderRadius: "12px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1px",
+                  background: "#e8e6e2",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "12px",
+                    background: "#f5f4f1",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    color: "#1a1917",
+                  }}
+                >
+                  Duration
+                </div>
+                <div
+                  style={{
+                    padding: "12px",
+                    background: "#f5f4f1",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    color: "#1a1917",
+                  }}
+                >
+                  Cost (₹)
+                </div>
+
+                {DURATIONS.map(({ key, label }) => (
+                  <React.Fragment key={key}>
+                    <div
+                      style={{
+                        padding: "12px",
+                        background: "#faf9f7",
+                        fontSize: "14px",
+                        color: "#1a1917",
+                      }}
+                    >
+                      {label}
+                    </div>
+                    <div style={{ padding: "10px 12px", background: "#faf9f7" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "14px", color: "#6b6966" }}>₹</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={String(rackRates?.[key] ?? "")}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/[^\d]/g, "");
+                            setRackRates((prev) => ({ ...prev, [key]: cleaned }));
+                          }}
+                          placeholder="0"
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            padding: "8px 10px",
+                            border: "1px solid #e8e6e2",
+                            borderRadius: "8px",
+                            fontSize: "14px",
+                            fontFamily: "'DM Sans', sans-serif",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          </div>
 
           <div
             style={{

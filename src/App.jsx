@@ -18,8 +18,10 @@ import CalendarMonthly from "./pages/CalendarMonthly.jsx";
 import Vendorslist from "./pages/Vendorslist.jsx";
 import VendorDetailsPage from "./pages/VendorDetailsPage.jsx";
 import Daybookhome from "./pages/daybook/Daybookhome.jsx";
+import PaymentsHome from "./pages/payments/PaymentsHome.jsx";
 import TargetHome from "./pages/target/TargetHome.jsx";
 import EmiHome from "./pages/emi/EmiHome.jsx";
+import ViewDatabase from "./pages/database/ViewDatabase.jsx";
 
 function LoginGuard() {
   const { is_logged_in, role } = useSelector((state) => state.user.value);
@@ -84,8 +86,10 @@ export default function App() {
           {/* Owner only */}
           <Route element={<RequireRole roles={[ROLES.OWNER]} />}>
             <Route path="daybook" element={<Daybookhome />} />
+            <Route path="payments" element={<PaymentsHome />} />
             <Route path="target" element={<TargetHome />} />
             <Route path="emi" element={<EmiHome />} />
+            <Route path="database" element={<ViewDatabase />} />
           </Route>
 
           {/* Admin only */}

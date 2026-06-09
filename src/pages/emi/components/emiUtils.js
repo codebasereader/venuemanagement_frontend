@@ -33,19 +33,39 @@ export function getEmiDay(emiDateStr) {
   return new Date(emiDateStr).getDate();
 }
 
+function getEmiStepMonths(emiType) {
+  const normalized = String(emiType || "monthly").toLowerCase().trim();
+  if (normalized === "quarterly") return 3;
+  if (
+    normalized === "half-yearly" ||
+    normalized === "half_yearly" ||
+    normalized === "halfyearly" ||
+    normalized === "half yearly"
+  ) {
+    return 6;
+  }
+  if (normalized === "yearly") return 12;
+  return 1;
+}
+
 /**
- * Generate every month/year between start (inclusive) and end (inclusive).
+ * Generate EMI cycles between start (inclusive) and end (inclusive) based on emiType.
  * Returns [{ month: 1-12, year: YYYY }, ...]
  */
-export function generateEmiMonths(emiDateStr, endDateStr) {
+export function generateEmiMonths(emiDateStr, endDateStr, emiType = "monthly") {
   const start = new Date(emiDateStr);
   const end = new Date(endDateStr);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+    return [];
+  }
+
+  const stepMonths = getEmiStepMonths(emiType);
   const result = [];
   let current = new Date(start.getFullYear(), start.getMonth(), 1);
   const endFirst = new Date(end.getFullYear(), end.getMonth(), 1);
   while (current <= endFirst) {
     result.push({ month: current.getMonth() + 1, year: current.getFullYear() });
-    current.setMonth(current.getMonth() + 1);
+    current.setMonth(current.getMonth() + stepMonths);
   }
   return result;
 }

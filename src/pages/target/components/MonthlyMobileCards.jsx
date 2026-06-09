@@ -2,8 +2,10 @@ import React, { useMemo } from "react";
 import {
   calcMonthlyTotals,
   DURATIONS,
+  formatDurationWithPrice,
   fmtCurrency,
   fmtNum,
+  getDurationPrice,
   parseNum,
   profitColor,
 } from "../utils/targetHelpers";
@@ -167,7 +169,7 @@ function SpaceCard({ row, idx, editMode, onCellChange }) {
                 marginBottom: 8,
               }}
             >
-              {dur.label}
+              {formatDurationWithPrice(row, dur)}
             </div>
 
             <div
@@ -218,7 +220,7 @@ function SpaceCard({ row, idx, editMode, onCellChange }) {
                   durKey={dur.key}
                   editMode={editMode}
                   onCellChange={onCellChange}
-                  isEditable
+                  isEditable={getDurationPrice(row, dur.key) === null}
                 />
                 <StatRow
                   label="Expenses"

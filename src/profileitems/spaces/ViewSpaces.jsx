@@ -9,6 +9,7 @@ import {
   createSpace,
   deleteSpace,
   listSpaces,
+  normalizeRackRates,
   updateSpace,
 } from "../../api/spaces";
 import { uploadImageToS3 } from "../../api/images";
@@ -113,6 +114,8 @@ export default function ViewSpaces() {
           }
         }
 
+        const normalizedRackRates = normalizeRackRates(payload.rackRates);
+
         const body = {
           name: payload.name?.trim() ?? "",
           description: payload.description?.trim() ?? "",
@@ -120,6 +123,7 @@ export default function ViewSpaces() {
           dimensions: payload.dimensions?.trim() || undefined,
           isActive: true,
           images: imageUrls,
+          ...(Object.keys(normalizedRackRates).length > 0 ? { rackRates: normalizedRackRates } : {}),
         };
         if (payload._id) {
           await updateSpace(accessToken, effectiveVenueId, payload._id, body);
@@ -132,7 +136,12 @@ export default function ViewSpaces() {
         setEditingSpace(null);
         await fetchSpaces();
       } catch (err) {
-        msgApi.error(err?.response?.data?.message ?? err?.message ?? "Failed to save space");
+        msgApi.error(
+          err?.response?.data?.error?.message
+            ?? err?.response?.data?.message
+            ?? err?.message
+            ?? "Failed to save space",
+        );
         throw err;
       }
     },

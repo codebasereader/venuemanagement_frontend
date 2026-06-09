@@ -1,5 +1,6 @@
 ﻿import React, { useCallback, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { message } from "antd";
 import {
   getMonthlyPlan,
@@ -58,6 +59,7 @@ export default function TargetHome() {
   const [yearlyYear, setYearlyYear] = useState(CURRENT_YEAR);
   const [yearlyData, setYearlyData] = useState(null);
   const [yearlyLoading, setYearlyLoading] = useState(false);
+  const navigate = useNavigate();
 
   const { venueId, access_token: accessToken } = useSelector(
     (state) => state.user.value,
@@ -123,6 +125,13 @@ export default function TargetHome() {
                 [durationKey]: {
                   ...row.durations?.[durationKey],
                   [field]: value,
+                  ...(field === "expectedBookings" &&
+                  Number.isFinite(Number(row?.rackRates?.[durationKey]))
+                    ? {
+                        expectedBusiness:
+                          (Number(value) || 0) * Number(row.rackRates[durationKey]),
+                      }
+                    : {}),
                 },
               },
             }
@@ -151,6 +160,7 @@ export default function TargetHome() {
           rowType: r.rowType,
           spaceId: r.spaceId || null,
           spaceName: r.spaceName,
+          rackRates: r.rackRates ?? {},
           durations: Object.fromEntries(
             DURATIONS.map(({ key }) => [
               key,
@@ -245,6 +255,42 @@ export default function TargetHome() {
         >
           Plan expected targets and compare against actual performance
         </p>
+        <div
+          style={{
+            marginTop: 12,
+            background: "#fff8e8",
+            border: "1px solid #f4ddb1",
+            borderRadius: 10,
+            padding: "10px 12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            flexWrap: "wrap",
+            fontFamily: FONT,
+          }}
+        >
+          <span style={{ fontSize: 13, color: "#7a5a1d", fontWeight: 600 }}>
+            Add prices for the duration in spaces to auto calculate.
+          </span>
+          <button
+            type="button"
+            onClick={() => navigate("/profile/spaces")}
+            style={{
+              border: "none",
+              borderRadius: 8,
+              background: "#1a1917",
+              color: "#fff",
+              fontSize: 12,
+              fontWeight: 700,
+              padding: "7px 12px",
+              cursor: "pointer",
+              fontFamily: FONT,
+            }}
+          >
+            Add here
+          </button>
+        </div>
       </div>
 
       {/* Tab switcher */}

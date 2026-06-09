@@ -16,10 +16,30 @@ export async function createLead(venueId, payload, token) {
   return unwrapData(res);
 }
 
-export async function listLeads(venueId, token, { status } = {}) {
+export async function listLeads(venueId, token, query = {}) {
+  const params = {};
+  const {
+    search,
+    eventStatus,
+    status,
+    startDate,
+    endDate,
+    page,
+    limit,
+  } = query || {};
+
+  if (search) params.search = search;
+  if (eventStatus) params.eventStatus = eventStatus;
+  // Keep status fallback for older consumers/backends.
+  if (status) params.status = status;
+  if (startDate) params.startDate = startDate;
+  if (endDate) params.endDate = endDate;
+  if (Number.isFinite(Number(page))) params.page = Number(page);
+  if (Number.isFinite(Number(limit))) params.limit = Number(limit);
+
   const res = await axios.get(`${API_BASE_URL}venues/${venueId}/leads`, {
     headers: authHeaders(token),
-    params: status ? { status } : undefined,
+    params: Object.keys(params).length > 0 ? params : undefined,
   });
   return unwrapData(res);
 }
@@ -35,11 +55,15 @@ export async function listLeads(venueId, token, { status } = {}) {
  *   → will fetch only space-buyout bookings.
  */
 export async function listConfirmedLeads(venueId, token, params = {}) {
+  const query = { ...params };
+  if (query.view === "year") {
+    delete query.month;
+  }
   const res = await axios.get(
     `${API_BASE_URL}venues/${venueId}/leads/confirmed`,
     {
       headers: authHeaders(token),
-      params,
+      params: query,
     },
   );
   return unwrapData(res);
@@ -55,13 +79,29 @@ export async function listConfirmedLeads(venueId, token, params = {}) {
  *   listConfirmedLeadStats(venueId, token, { year: 2026, month: 3 })
  */
 export async function listConfirmedLeadStats(venueId, token, params) {
+  const query = { ...(params || {}) };
+  if (query.view === "year") {
+    delete query.month;
+  }
   const res = await axios.get(
     `${API_BASE_URL}venues/${venueId}/leads/confirmed/stats`,
     {
       headers: authHeaders(token),
-      params,
+      params: query,
     },
   );
+  return unwrapData(res);
+}
+
+export async function listLeadStats(venueId, token, params = {}) {
+  const query = { ...params };
+  if (query.view === "year") {
+    delete query.month;
+  }
+  const res = await axios.get(`${API_BASE_URL}venues/${venueId}/leads/stats`, {
+    headers: authHeaders(token),
+    params: query,
+  });
   return unwrapData(res);
 }
 

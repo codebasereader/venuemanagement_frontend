@@ -70,6 +70,7 @@ function buildFallbackRowsFromSpaces(apiData) {
     rowType: "venue_buyout",
     spaceId: null,
     spaceName: "Complete Venue Buyout",
+    rackRates: apiData?.totals?.rackRates ?? {},
     durations: normalizeDurationsFromApi(apiData?.totals?.durationTotals),
   });
 
@@ -90,6 +91,7 @@ function buildFallbackRowsFromSpaces(apiData) {
       rowType: "space",
       spaceId: space?.spaceId ?? null,
       spaceName: space?.spaceName ?? "Unnamed Space",
+      rackRates: space?.rackRates ?? space?.prices ?? {},
       durations,
     });
   }
@@ -146,9 +148,21 @@ export function mergeRowsWithApiData(apiData) {
         (row.rowType === "venue_buyout"
           ? "Complete Venue Buyout"
           : "Unnamed Space"),
+      rackRates: row.rackRates ?? row.prices ?? {},
       durations,
     };
   });
+}
+
+export function getDurationPrice(row, durationKey) {
+  const val = row?.rackRates?.[durationKey];
+  const n = parseNum(val);
+  return n;
+}
+
+export function formatDurationWithPrice(row, duration) {
+  const price = getDurationPrice(row, duration.key);
+  return `${duration.label} (${price === null ? "NA" : fmtCurrency(price)})`;
 }
 
 // ─── Totals calculators ───────────────────────────────────────────────────────

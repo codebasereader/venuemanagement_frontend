@@ -138,9 +138,9 @@ function MonthlyInstallments({ bill, onMarkPaid, onViewDetails }) {
   const months = useMemo(
     () =>
       bill.emiDate && bill.emi_end_date
-        ? generateEmiMonths(bill.emiDate, bill.emi_end_date)
+        ? generateEmiMonths(bill.emiDate, bill.emi_end_date, bill.emiType)
         : [],
-    [bill.emiDate, bill.emi_end_date],
+    [bill.emiDate, bill.emi_end_date, bill.emiType],
   );
 
   if (!months.length) {
@@ -404,7 +404,7 @@ export default function EmiListView({
           const isExpanded = expandedId === bill._id;
           const allMonths =
             bill.emiDate && bill.emi_end_date
-              ? generateEmiMonths(bill.emiDate, bill.emi_end_date)
+              ? generateEmiMonths(bill.emiDate, bill.emi_end_date, bill.emiType)
               : [];
           const paidCount = allMonths.filter(
             ({ month, year }) =>
