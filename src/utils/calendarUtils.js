@@ -12,9 +12,6 @@ export const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep"
 export const MONTH_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 export const DAY_LABELS = ["M","T","W","T","F","S","S"]; // Mon-first
 
-/** Booking history starts from this year */
-export const CALENDAR_START_YEAR = 2026;
-
 // ── Pure date helpers ──────────────────────────────────────────
 
 /** Days in a given month — handles leap years automatically. */
@@ -41,15 +38,16 @@ export function getDaysInYear(year) {
   return new Date(year, 1, 29).getDate() === 29 ? 366 : 365;
 }
 
+/** How many future years to offer in the year selector */
+export const CALENDAR_FUTURE_YEARS = 5;
+
 /**
- * Years available in the selector.
- * — Before 2026: returns [currentYear]
- * — From 2026 onward: returns [2026 … currentYear]
+ * Years available in the selector: current year through
+ * currentYear + CALENDAR_FUTURE_YEARS.
  */
 export function getAvailableYears() {
   const current = new Date().getFullYear();
-  if (current < CALENDAR_START_YEAR) return [current];
-  return Array.from({ length: current - CALENDAR_START_YEAR + 1 }, (_, i) => CALENDAR_START_YEAR + i);
+  return Array.from({ length: CALENDAR_FUTURE_YEARS + 1 }, (_, i) => current + i);
 }
 
 /** Time-of-day greeting. */

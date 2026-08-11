@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 // BookingCalendar.jsx
-// Religious calendar overlay (Hindu / Muslim / Christian).
+// Year booking calendar with confirmed / in-progress overlays
+// and optional Christian / Muslim / Hindu days.
 //
 // Default export: <BookingCalendar /> — drop into any page.
 //
@@ -17,22 +18,18 @@ import {
   MONTH_ABBR, MONTH_FULL, DAY_LABELS,
   getDaysInMonth, getStartOffset, toDateKey, getAvailableYears,
 } from "../utils/calendarUtils";
-import { CalendarTabs } from "../pages/admin/calendar/CalendarTabs";
 import { listCalendarDays } from "../api/calendar";
 
 // Computed once — never changes at runtime
 const AVAILABLE_YEARS = getAvailableYears();
 const TODAY = new Date();
+const EMPTY_MAP = new Map();
 
-// ── Religious calendar colors ─────────────────────────────────
+// ── Colors ─────────────────────────────────────────────────────
 
-const RELIGIOUS_COLORS = {
-  most_auspicious: "#15803d",   // deep green
-  auspicious: "#4ade80",        // light green
-  less_auspicious: "#facc15",   // yellow
-};
+const CONFIRMED_COLOR = "#1a1917";   // black — confirmed bookings
+const IN_PROGRESS_COLOR = "#facc15"; // yellow — in-progress bookings
 
-/** Booking "All" tab: color by faith (API returns rows with `religion`). */
 const RELIGION_VIEW_COLORS = {
   christian: "#dc2626",
   muslim: "#16a34a",
@@ -41,40 +38,61 @@ const RELIGION_VIEW_COLORS = {
 
 const FAITH_GRADIENT_ORDER = ["christian", "muslim", "hindu"];
 
-function faithsBackground(religions) {
-  const unique = [...new Set(religions.filter((r) => RELIGION_VIEW_COLORS[r]))];
-  const sorted = [...unique].sort(
-    (a, b) => FAITH_GRADIENT_ORDER.indexOf(a) - FAITH_GRADIENT_ORDER.indexOf(b),
-  );
-  if (sorted.length === 0) return null;
-  if (sorted.length === 1) return RELIGION_VIEW_COLORS[sorted[0]];
-  const step = 360 / sorted.length;
-  const stops = sorted
-    .map((rel, i) => {
+function formatBookingDateTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
+    day: "numeric", month: "short",
+    hour: "numeric", minute: "2-digit",
+  });
+}
+
+function formatEventType(booking) {
+  const t = booking?.eventType === "other" && booking?.eventTypeOther
+    ? booking.eventTypeOther
+    : booking?.eventType;
+  if (!t) return "";
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+function formatEventStatus(status) {
+  if (!status) return "";
+  return String(status).replace(/_/g, " ");
+}
+
+/** Build a solid color or conic-gradient from an ordered list of hex colors. */
+function slicesBackground(colors) {
+  const unique = [...new Set(colors.filter(Boolean))];
+  if (unique.length === 0) return null;
+  if (unique.length === 1) return unique[0];
+  const step = 360 / unique.length;
+  const stops = unique
+    .map((c, i) => {
       const start = i * step;
       const end = (i + 1) * step;
-      return `${RELIGION_VIEW_COLORS[rel]} ${start}deg ${end}deg`;
+      return `${c} ${start}deg ${end}deg`;
     })
     .join(", ");
   return `conic-gradient(from 0deg, ${stops})`;
 }
 
-// ── CalendarDayCell ────────────────────────────────────────────
-// Single clickable day circle.
+function faithColors(religions) {
+  if (!Array.isArray(religions) || !religions.length) return [];
+  const unique = [...new Set(religions.filter((r) => RELIGION_VIEW_COLORS[r]))];
+  return [...unique]
+    .sort((a, b) => FAITH_GRADIENT_ORDER.indexOf(a) - FAITH_GRADIENT_ORDER.indexOf(b))
+    .map((r) => RELIGION_VIEW_COLORS[r]);
+}
 
-const CalendarDayCell = memo(function CalendarDayCell({
-  day,
-  year,
-  month,
-  /** Auspicious type string, or `{ mode: 'faith', religions: string[] }` for the All tab */
-  religiousEntry,
-}) {
-  const isToday = TODAY.getFullYear() === year && TODAY.getMonth() === month && TODAY.getDate() === day;
-
-  let bg = "transparent";
-  let color = "#9a9896";
-  let fw = 400;
-  let border = "none";
+/**
+ * Resolve day cell fill from bookings + optional faiths.
+ * Overlaps (confirmed + in_progress + faiths) share the circle via conic slices.
+ */
+function resolveDayStyle(bookings, religiousEntry, isToday) {
+  const list = Array.isArray(bookings) ? bookings : [];
+  const hasConfirmed = list.some((b) => b?.eventStatus === "confirmed");
+  const hasInProgress = list.some((b) => b?.eventStatus === "in_progress");
 
   const faith =
     religiousEntry &&
@@ -82,85 +100,213 @@ const CalendarDayCell = memo(function CalendarDayCell({
     religiousEntry.mode === "faith" &&
     Array.isArray(religiousEntry.religions)
       ? religiousEntry.religions
-      : null;
-  const faithBg = faith?.length ? faithsBackground(faith) : null;
+      : [];
 
-  if (faithBg) {
-    bg = faithBg;
-    color = "#ffffff";
-    fw = 600;
-  } else if (
-    typeof religiousEntry === "string" &&
-    religiousEntry &&
-    RELIGIOUS_COLORS[religiousEntry]
-  ) {
-    bg = RELIGIOUS_COLORS[religiousEntry];
-    color = religiousEntry === "less_auspicious" ? "#1a1917" : "#ffffff";
-    fw = 600;
-  } else if (isToday) {
-    bg = "#ede8ff";
-    color = "#7c6fcd";
-    fw = 600;
-    border = "1.5px solid #7c6fcd";
+  const colors = [];
+  if (hasConfirmed) colors.push(CONFIRMED_COLOR);
+  if (hasInProgress) colors.push(IN_PROGRESS_COLOR);
+  colors.push(...faithColors(faith));
+
+  const bg = slicesBackground(colors);
+  if (bg) {
+    const onlyYellow =
+      colors.length === 1 && colors[0] === IN_PROGRESS_COLOR;
+    return {
+      bg,
+      color: onlyYellow ? "#1a1917" : "#ffffff",
+      fw: 600,
+      border: "none",
+      hasBooking: list.length > 0,
+    };
   }
 
+  if (isToday) {
+    return {
+      bg: "#ede8ff",
+      color: "#7c6fcd",
+      fw: 600,
+      border: "1.5px solid #7c6fcd",
+      hasBooking: false,
+    };
+  }
+
+  return {
+    bg: "transparent",
+    color: "#9a9896",
+    fw: 400,
+    border: "none",
+    hasBooking: false,
+  };
+}
+
+// ── CalendarDayCell ────────────────────────────────────────────
+
+const CalendarDayCell = memo(function CalendarDayCell({
+  day,
+  year,
+  month,
+  religiousEntry,
+  bookings,
+}) {
+  const [hovered, setHovered] = useState(false);
+  const isToday =
+    TODAY.getFullYear() === year &&
+    TODAY.getMonth() === month &&
+    TODAY.getDate() === day;
+
+  const { bg, color, fw, border, hasBooking } = resolveDayStyle(
+    bookings,
+    religiousEntry,
+    isToday,
+  );
+
   return (
-    <button
-      // Read-only: no tap / toggle behaviour
-      aria-label={`${MONTH_FULL[month]} ${day}, ${year}`}
-      style={{
-        width: "100%",
-        aspectRatio: "1",
-        borderRadius: "50%",
-        border,
-        background: bg,
-        color,
-        fontWeight: fw,
-        fontSize: "clamp(7px, 1.5vw, 9px)",
-        fontFamily: "'DM Sans', sans-serif",
-        cursor: "default",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 0,
-        lineHeight: 1,
-        transition: "background 0.15s, color 0.15s",
-        WebkitTapHighlightColor: "transparent",
-        touchAction: "manipulation",
-      }}
-      // No hover interaction in read-only mode
-    >
-      <div
+    <div style={{ position: "relative", minWidth: 0 }}>
+      <button
+        aria-label={`${MONTH_FULL[month]} ${day}, ${year}${hasBooking ? " — booking" : ""}`}
+        onMouseEnter={hasBooking ? () => setHovered(true) : undefined}
+        onMouseLeave={hasBooking ? () => setHovered(false) : undefined}
+        onFocus={hasBooking ? () => setHovered(true) : undefined}
+        onBlur={hasBooking ? () => setHovered(false) : undefined}
         style={{
-          position: "relative",
+          width: "100%",
+          aspectRatio: "1",
+          borderRadius: "50%",
+          border,
+          background: bg,
+          color,
+          fontWeight: fw,
+          fontSize: "clamp(7px, 1.5vw, 9px)",
+          fontFamily: "'DM Sans', sans-serif",
+          cursor: hasBooking ? "pointer" : "default",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: "100%",
-          height: "100%",
+          padding: 0,
+          lineHeight: 1,
+          transition: "background 0.15s, color 0.15s",
+          WebkitTapHighlightColor: "transparent",
+          touchAction: "manipulation",
         }}
       >
-        <span>{day}</span>
-      </div>
-    </button>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          <span>{day}</span>
+        </div>
+      </button>
+
+      {hasBooking && hovered && <BookingTooltip bookings={bookings} />}
+    </div>
   );
 });
 
-// ── MonthGrid ──────────────────────────────────────────────────
-// One month: name, M T W T F S S header, and date cells.
+// ── BookingTooltip ─────────────────────────────────────────────
 
-const MonthGrid = memo(function MonthGrid({ year, month, religiousByDate }) {
+function BookingTooltip({ bookings }) {
+  return (
+    <div
+      role="tooltip"
+      style={{
+        position: "absolute",
+        bottom: "calc(100% + 6px)",
+        left: "50%",
+        transform: "translateX(-50%)",
+        background: "#1a1917",
+        color: "#ffffff",
+        borderRadius: "10px",
+        padding: "10px 12px",
+        minWidth: "180px",
+        maxWidth: "240px",
+        zIndex: 200,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+        fontFamily: "'DM Sans', sans-serif",
+        pointerEvents: "none",
+      }}
+    >
+      {bookings.map((b, i) => {
+        const name = b?.contact?.clientName || b?.contact?.name || "Booking";
+        const eventType = formatEventType(b);
+        const status = formatEventStatus(b?.eventStatus);
+        const start = formatBookingDateTime(b?.specialDay?.startAt);
+        const end = formatBookingDateTime(b?.specialDay?.endAt);
+        const statusColor =
+          b?.eventStatus === "in_progress"
+            ? IN_PROGRESS_COLOR
+            : b?.eventStatus === "confirmed"
+              ? "#ffffff"
+              : "#c5c2be";
+        return (
+          <div
+            key={b?._id || i}
+            style={{
+              paddingTop: i === 0 ? 0 : 8,
+              marginTop: i === 0 ? 0 : 8,
+              borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.15)",
+            }}
+          >
+            <p style={{ margin: 0, fontSize: "12px", fontWeight: 700, lineHeight: 1.3 }}>
+              {name}
+            </p>
+            <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#c5c2be" }}>
+              {[eventType, b?.referenceCode].filter(Boolean).join(" · ")}
+              {status ? (
+                <>
+                  {(eventType || b?.referenceCode) ? " · " : ""}
+                  <span style={{ fontWeight: 600, color: statusColor }}>{status}</span>
+                </>
+              ) : null}
+            </p>
+            {(start || end) && (
+              <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#c5c2be" }}>
+                {start}{end ? ` – ${end}` : ""}
+              </p>
+            )}
+            {b?.expectedGuests != null && (
+              <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#c5c2be" }}>
+                {b.expectedGuests} guests
+              </p>
+            )}
+          </div>
+        );
+      })}
+
+      <span
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          top: "100%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          borderLeft: "6px solid transparent",
+          borderRight: "6px solid transparent",
+          borderTop: "6px solid #1a1917",
+        }}
+      />
+    </div>
+  );
+}
+
+// ── MonthGrid ──────────────────────────────────────────────────
+
+const MonthGrid = memo(function MonthGrid({ year, month, religiousByDate, bookingsByDate }) {
   const cells = useMemo(() => {
-    const days   = getDaysInMonth(year, month);
+    const days = getDaysInMonth(year, month);
     const offset = getStartOffset(year, month);
-    const arr    = [...Array(offset).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
-    while (arr.length % 7 !== 0) arr.push(null); // complete last row
+    const arr = [...Array(offset).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
+    while (arr.length % 7 !== 0) arr.push(null);
     return arr;
   }, [year, month]);
 
   return (
     <div style={{ minWidth: 0 }}>
-      {/* Month name */}
       <p style={{
         margin: "0 0 5px",
         fontSize: "11px",
@@ -173,7 +319,6 @@ const MonthGrid = memo(function MonthGrid({ year, month, religiousByDate }) {
         {MONTH_ABBR[month]}
       </p>
 
-      {/* Day-of-week labels: M T W T F S S */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: "2px" }}>
         {DAY_LABELS.map((lbl, i) => (
           <div key={i} aria-hidden="true" style={{
@@ -189,7 +334,6 @@ const MonthGrid = memo(function MonthGrid({ year, month, religiousByDate }) {
         ))}
       </div>
 
-      {/* Date cells */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "1px" }}>
         {cells.map((day, i) => {
           if (day === null) return <div key={`e-${i}`} aria-hidden="true" />;
@@ -201,6 +345,7 @@ const MonthGrid = memo(function MonthGrid({ year, month, religiousByDate }) {
               year={year}
               month={month}
               religiousEntry={religiousByDate.get(key)}
+              bookings={bookingsByDate.get(key)}
             />
           );
         })}
@@ -211,23 +356,26 @@ const MonthGrid = memo(function MonthGrid({ year, month, religiousByDate }) {
 
 // ── CalendarLegend ─────────────────────────────────────────────
 
-function CalendarLegend({ variant = "auspicious" }) {
-  const faithItems = [
+function CalendarLegend({ showFaiths, showConfirmed, showInProgress }) {
+  const items = [
     { key: "today", label: "Today", bg: "#ede8ff", border: "1.5px solid #7c6fcd" },
-    { key: "christian", label: "Christian", bg: RELIGION_VIEW_COLORS.christian, border: "none" },
-    { key: "muslim", label: "Muslim", bg: RELIGION_VIEW_COLORS.muslim, border: "none" },
-    { key: "hindu", label: "Hindu", bg: RELIGION_VIEW_COLORS.hindu, border: "none" },
+    ...(showConfirmed
+      ? [{ key: "confirmed", label: "Confirmed", bg: CONFIRMED_COLOR, border: "none" }]
+      : []),
+    ...(showInProgress
+      ? [{ key: "in_progress", label: "In progress", bg: IN_PROGRESS_COLOR, border: "none" }]
+      : []),
+    ...(showFaiths
+      ? [
+          { key: "christian", label: "Christian", bg: RELIGION_VIEW_COLORS.christian, border: "none" },
+          { key: "muslim", label: "Muslim", bg: RELIGION_VIEW_COLORS.muslim, border: "none" },
+          { key: "hindu", label: "Hindu", bg: RELIGION_VIEW_COLORS.hindu, border: "none" },
+        ]
+      : []),
   ];
-  const auspiciousItems = [
-    { key: "today", label: "Today",            bg: "#ede8ff", border: "1.5px solid #7c6fcd" },
-    { key: "most",  label: "Highly Auspicious",  bg: RELIGIOUS_COLORS.most_auspicious, border: "none" },
-    { key: "ausp",  label: "Auspicious",       bg: RELIGIOUS_COLORS.auspicious, border: "none" },
-    { key: "less",  label: "Less auspicious",  bg: RELIGIOUS_COLORS.less_auspicious, border: "none" },
-  ];
-  const items = variant === "faith" ? faithItems : auspiciousItems;
   return (
     <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "20px" }}>
-      {items.map(({ key, label, bg, border, isTick }) => (
+      {items.map(({ key, label, bg, border }) => (
         <div key={key} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <span
             aria-hidden="true"
@@ -239,14 +387,8 @@ function CalendarLegend({ variant = "auspicious" }) {
               background: bg,
               border,
               flexShrink: 0,
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 7,
-              color: "#ffffff",
             }}
-          >
-            {isTick ? "✓" : ""}
-          </span>
+          />
           <span style={{ fontSize: "12px", color: "#9a9896", fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
             {label}
           </span>
@@ -256,8 +398,60 @@ function CalendarLegend({ variant = "auspicious" }) {
   );
 }
 
+// ── OverlayToggle ──────────────────────────────────────────────
+
+function OverlayToggle({ on, onChange, label, ariaLabel, activeColor = "#1a1917" }) {
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "10px",
+        fontFamily: "'DM Sans', sans-serif",
+      }}
+    >
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={ariaLabel || label}
+        onClick={() => onChange(!on)}
+        style={{
+          position: "relative",
+          width: 40,
+          height: 22,
+          borderRadius: 999,
+          border: "none",
+          padding: 0,
+          background: on ? activeColor : "#e8e6e2",
+          cursor: "pointer",
+          transition: "background 0.2s",
+          flexShrink: 0,
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            top: 3,
+            left: on ? 20 : 3,
+            width: 16,
+            height: 16,
+            borderRadius: "50%",
+            background: "#ffffff",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+            transition: "left 0.2s",
+          }}
+        />
+      </button>
+      <span style={{ fontSize: "12px", fontWeight: 600, color: "#6b6966", lineHeight: 1.3 }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
 // ── YearSelector ───────────────────────────────────────────────
-// Accessible dropdown. Keyboard (Escape) + outside-click aware.
 
 function YearSelector({ year, onChange }) {
   const [open, setOpen] = useState(false);
@@ -266,13 +460,15 @@ function YearSelector({ year, onChange }) {
   useEffect(() => {
     if (!open) return;
     const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    const onKey  = (e) => { if (e.key === "Escape") setOpen(false); };
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown",   onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
-  // Single year — no need for a dropdown
   if (AVAILABLE_YEARS.length <= 1) {
     return (
       <span style={{
@@ -328,7 +524,7 @@ function YearSelector({ year, onChange }) {
                   textAlign: "left", border: "none", borderRadius: "8px",
                   cursor: "pointer", fontSize: "13px",
                   fontWeight: y === year ? 700 : 500,
-                  color:      y === year ? "#7c6fcd" : "#1a1917",
+                  color: y === year ? "#7c6fcd" : "#1a1917",
                   background: y === year ? "#f5f4f1" : "transparent",
                   fontFamily: "'DM Sans', sans-serif",
                   transition: "background 0.12s",
@@ -347,13 +543,14 @@ function YearSelector({ year, onChange }) {
 }
 
 // ── BookingCalendar (default export) ──────────────────────────
-// Fully controlled. Parent owns year + bookedDates state.
-// Responsive: auto-fill from 1 col (mobile) to 4 cols (desktop).
 
-export default function BookingCalendar({ year, onYearChange, bookedDates, onToggle }) {
+export default function BookingCalendar({ year, onYearChange }) {
   const { access_token: accessToken } = useSelector((state) => state.user.value);
-  const [religion, setReligion] = useState("all");
+  const [showFaiths, setShowFaiths] = useState(false);
+  const [showConfirmed, setShowConfirmed] = useState(true);
+  const [showInProgress, setShowInProgress] = useState(true);
   const [religiousByDate, setReligiousByDate] = useState(new Map());
+  const [bookingsByDate, setBookingsByDate] = useState(new Map());
 
   useEffect(() => {
     if (!accessToken) return;
@@ -361,37 +558,58 @@ export default function BookingCalendar({ year, onYearChange, bookedDates, onTog
     let cancelled = false;
     (async () => {
       try {
-        const data = await listCalendarDays(accessToken, { religion, year });
-        const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+        const data = await listCalendarDays(accessToken, { religion: "all", year });
+        const arr = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.days)
+            ? data.days
+            : Array.isArray(data?.data)
+              ? data.data
+              : [];
+
+        const byDate = new Map();
+        for (const item of arr) {
+          if (!item?.date || !item?.religion) continue;
+          const r = String(item.religion).toLowerCase();
+          if (!RELIGION_VIEW_COLORS[r]) continue;
+          if (!byDate.has(item.date)) byDate.set(item.date, new Set());
+          byDate.get(item.date).add(r);
+        }
         const map = new Map();
-        if (religion === "all") {
-          const byDate = new Map();
-          for (const item of arr) {
-            if (!item?.date || !item?.religion) continue;
-            const r = String(item.religion).toLowerCase();
-            if (!RELIGION_VIEW_COLORS[r]) continue;
-            if (!byDate.has(item.date)) byDate.set(item.date, new Set());
-            byDate.get(item.date).add(r);
-          }
-          for (const [dateKey, set] of byDate) {
-            map.set(dateKey, { mode: "faith", religions: [...set] });
-          }
-        } else {
-          for (const item of arr) {
-            if (item?.date && item?.type) {
-              map.set(item.date, item.type);
-            }
+        for (const [dateKey, set] of byDate) {
+          map.set(dateKey, { mode: "faith", religions: [...set] });
+        }
+
+        const bookingItems = Array.isArray(data?.bookings?.items) ? data.bookings.items : [];
+        const bookingsMap = new Map();
+        for (const booking of bookingItems) {
+          const status = booking?.eventStatus;
+          if (status !== "confirmed" && status !== "in_progress") continue;
+
+          const start = booking?.specialDay?.startAt ? new Date(booking.specialDay.startAt) : null;
+          const end = booking?.specialDay?.endAt ? new Date(booking.specialDay.endAt) : null;
+          if (!start || Number.isNaN(start.getTime())) continue;
+          const last = end && !Number.isNaN(end.getTime()) ? end : start;
+          const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+          const lastDay = new Date(last.getFullYear(), last.getMonth(), last.getDate());
+          while (cursor <= lastDay) {
+            const key = toDateKey(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
+            if (!bookingsMap.has(key)) bookingsMap.set(key, []);
+            bookingsMap.get(key).push(booking);
+            cursor.setDate(cursor.getDate() + 1);
           }
         }
+
         if (!cancelled) {
           setReligiousByDate(map);
+          setBookingsByDate(bookingsMap);
         }
       } catch (err) {
-        // Non-blocking; booking calendar still works without religious overlay
         // eslint-disable-next-line no-console
         console.error("Failed to load religious calendar days", err);
         if (!cancelled) {
           setReligiousByDate(new Map());
+          setBookingsByDate(new Map());
         }
       }
     })();
@@ -399,7 +617,23 @@ export default function BookingCalendar({ year, onYearChange, bookedDates, onTog
     return () => {
       cancelled = true;
     };
-  }, [accessToken, religion, year]);
+  }, [accessToken, year]);
+
+  const visibleReligiousByDate = showFaiths ? religiousByDate : EMPTY_MAP;
+
+  const visibleBookingsByDate = useMemo(() => {
+    if (!showConfirmed && !showInProgress) return EMPTY_MAP;
+    const map = new Map();
+    for (const [key, list] of bookingsByDate) {
+      const filtered = list.filter((b) => {
+        if (b?.eventStatus === "confirmed") return showConfirmed;
+        if (b?.eventStatus === "in_progress") return showInProgress;
+        return false;
+      });
+      if (filtered.length) map.set(key, filtered);
+    }
+    return map;
+  }, [bookingsByDate, showConfirmed, showInProgress]);
 
   return (
     <section aria-label={`Booking calendar ${year}`} style={{
@@ -409,7 +643,6 @@ export default function BookingCalendar({ year, onYearChange, bookedDates, onTog
       border: "1px solid #f1f0ee",
       boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
     }}>
-      {/* Header */}
       <div style={{
         display: "flex", justifyContent: "space-between",
         alignItems: "flex-start", marginBottom: "16px",
@@ -422,19 +655,41 @@ export default function BookingCalendar({ year, onYearChange, bookedDates, onTog
           }}>
             Booking Calendar
           </h2>
-          <p style={{ margin: "4px 0 4px", fontSize: "12px", color: "#9a9896", fontFamily: "'DM Sans', sans-serif" }}>
-            Auspicious days are shown from the calendar-days API
+          <p style={{ margin: "4px 0 10px", fontSize: "12px", color: "#9a9896", fontFamily: "'DM Sans', sans-serif" }}>
+            Confirmed and in-progress special days; toggle faiths for auspicious overlay
           </p>
-          <div style={{ marginTop: "4px" }}>
-            <CalendarTabs value={religion} onChange={setReligion} includeAllTab />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "14px 20px" }}>
+            <OverlayToggle
+              on={showConfirmed}
+              onChange={setShowConfirmed}
+              label="Confirmed"
+              ariaLabel="Show confirmed bookings"
+              activeColor={CONFIRMED_COLOR}
+            />
+            <OverlayToggle
+              on={showInProgress}
+              onChange={setShowInProgress}
+              label="In progress"
+              ariaLabel="Show in-progress bookings"
+              activeColor="#ca8a04"
+            />
+            <OverlayToggle
+              on={showFaiths}
+              onChange={setShowFaiths}
+              label="Christian · Muslim · Hindu"
+              ariaLabel="Show Christian, Muslim, and Hindu days"
+            />
           </div>
         </div>
         <YearSelector year={year} onChange={onYearChange} />
       </div>
 
-      <CalendarLegend variant={religion === "all" ? "faith" : "auspicious"} />
+      <CalendarLegend
+        showFaiths={showFaiths}
+        showConfirmed={showConfirmed}
+        showInProgress={showInProgress}
+      />
 
-      {/* 12 month grids — responsive columns */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
@@ -445,7 +700,8 @@ export default function BookingCalendar({ year, onYearChange, bookedDates, onTog
             key={`${year}-${m}`}
             year={year}
             month={m}
-            religiousByDate={religiousByDate}
+            religiousByDate={visibleReligiousByDate}
+            bookingsByDate={visibleBookingsByDate}
           />
         ))}
       </div>

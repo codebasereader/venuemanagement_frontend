@@ -10,7 +10,7 @@ import { getAvailableYears, getGreeting } from "../utils/calendarUtils";
 // Computed once on load — stable across renders
 const GREETING     = getGreeting();
 const YEARS        = getAvailableYears();
-const DEFAULT_YEAR = YEARS[YEARS.length - 1]; // most recent year
+const DEFAULT_YEAR = YEARS[0]; // present year
 
 // ── Home Page ─────────────────────────────────────────────────
 
